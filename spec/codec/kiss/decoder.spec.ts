@@ -118,4 +118,37 @@ describe('decode', () => {
     it('has the expected payload', () => expect(payload).toEqual(expectedPayload))
     it('returns the expected remainder', () => expect(remainder).toEqual(expectedRemainder))
   })
+
+  it.each([
+    {
+      description: 'FESC is followed by an invalid byte',
+      invalidFrame: new Uint8Array([FEND, 0x00, 0x01, FESC, 0x99, FEND]),
+      expectedError: 'Invalid escape sequence in dataframe'
+    },
+    {
+      description: 'frame ends with incomplete escape sequence',
+      invalidFrame: new Uint8Array([FEND, 0x00, 0x01, 0x02, FESC]),
+      expectedError: 'Incomplete KISS frame'
+    },
+    {
+      description: 'frame does not start with FEND',
+      invalidFrame: new Uint8Array([0x00, 0x00, 0x01, 0x02, FEND]),
+      expectedError: 'KISS packet does not start with FEND'
+    },
+    {
+      description: 'frame is incomplete (missing ending FEND)',
+      invalidFrame: new Uint8Array([FEND, 0x00, 0x01, 0x02, 0x03]),
+      expectedError: 'Incomplete KISS frame'
+    }
+  ])('throws when $description', ({ invalidFrame, expectedError }) => {
+    expect(() => decodeKISS_Frame(invalidFrame)).toThrow(expectedError)
+  })
+
+  it.each([0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f])(
+    'throws when command byte is invalid (0x%s)',
+    (invalidCommand) => {
+      const invalidFrame = new Uint8Array([FEND, invalidCommand, 0x01, 0x02, FEND])
+      expect(() => decodeKISS_Frame(invalidFrame)).toThrow('Invalid KISS command')
+    }
+  )
 })

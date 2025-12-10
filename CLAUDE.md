@@ -89,7 +89,7 @@ pack-chat/
 
 ### KISS Protocol - COMPLETE
 
-Full implementation with 80 passing tests.
+Full implementation with 93 passing tests.
 
 **Features:**
 - Frame encoding/decoding with FEND delimiters (0xC0)
@@ -97,6 +97,7 @@ Full implementation with 80 passing tests.
 - All 8 KISS commands: DATA_FRAME, TX_DELAY, PERSISTENCE, SLOT_TIME, TX_TAIL, FULL_DUPLEX, SET_HARDWARE, RETURN
 - Port number support (0-15)
 - State machine decoder with remainder handling for streaming
+- Comprehensive error handling (invalid escapes, incomplete frames, invalid commands)
 
 **Usage:**
 ```typescript
