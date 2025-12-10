@@ -1,0 +1,22 @@
+{
+  "name": "packchat",
+  "version": "0.1.0",
+  "description": "PackChat - Chat rooms over packet radio",
+  "author": "Guy Royse <guy@guy.dev> (https://guy.dev)",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.9",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.9"
+  }
+}
