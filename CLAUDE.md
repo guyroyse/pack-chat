@@ -62,20 +62,24 @@ pack-chat/
 │       │   ├── kiss-encoder.ts   # Binary encoding
 │       │   ├── kiss-decoder.ts   # Binary decoding (state machine)
 │       │   └── index.ts          # Public exports
-│       ├── ax-25/                # AX.25 protocol (PARTIAL)
-│       │   ├── types.ts          # Frame and address types
-│       │   ├── encoder.ts        # Frame encoding (COMPLETE)
-│       │   ├── decoder.ts        # Frame decoding (TODO)
+│       ├── ax25/                 # AX.25 protocol (PARTIAL)
+│       │   ├── ax25-types.ts     # Frame and address types
+│       │   ├── ax25-address.ts   # AX25_Address class
+│       │   ├── ax25-frame.ts     # AX25_Frame class
+│       │   ├── ax25-encoder.ts   # Frame encoding (COMPLETE)
+│       │   ├── ax25-decoder.ts   # Frame decoding (TODO)
 │       │   └── index.ts          # Public exports
 │       └── pack-chat/            # PackChat protocol (TODO)
 │           ├── types.ts          # Message types and interfaces
 │           └── index.ts          # Public exports
 ├── spec/                         # Test files
 │   └── codec/
-│       └── kiss/                 # KISS protocol tests (80 tests)
-│           ├── kiss-frame.spec.ts
-│           ├── encoder.spec.ts
-│           └── decoder.spec.ts
+│       ├── kiss/                 # KISS protocol tests (93 tests)
+│       │   ├── kiss-frame.spec.ts
+│       │   ├── kiss-encoder.spec.ts
+│       │   └── kiss-decoder.spec.ts
+│       └── ax25/                 # AX.25 protocol tests (53 tests)
+│           └── ax25-address.spec.ts
 ├── dist/                         # Compiled output
 ├── package.json
 ├── tsconfig.json                 # TypeScript config (includes tests)
@@ -113,22 +117,33 @@ const [decoded, remainder] = KISS_Frame.decode(buffer)
 
 ### AX.25 Protocol - PARTIAL
 
+53 tests passing for address encoding/decoding.
+
 **Complete:**
-- Type definitions (addresses, frames, control fields, PIDs)
+- Type definitions with type safety (AX25_SSID, AX25_CommandResponse, AX25_Callsign)
+- AX25_Address class with encode/decode methods
+- AX25_Frame class following KISS_Frame pattern
 - Frame encoding with proper address bit-shifting
-- `createUIFrame()` helper for connectionless frames
+- `createUIFrame()` static method for connectionless frames
 - Repeater path support
+- Comprehensive address test coverage (constructor, encode, decode, round-trip)
 
 **TODO:**
-- Frame decoding (`decodeAX25Frame()`)
-- Test coverage
+- Frame decoding (`decodeAX25_Frame()`)
+- Frame test coverage
 
 **Usage:**
 ```typescript
-import { createUIFrame, encodeAX25Frame } from '@lib/codec/ax-25'
+import { AX25_Frame, AX25_Address, AX25_SSID, AX25_CommandResponse } from '@lib/codec/ax25'
 
-const frame = createUIFrame('K6ABC', 0, infoPayload)
-const bytes = encodeAX25Frame(frame)
+// Create address
+const addr = new AX25_Address('K6ABC', 5 as AX25_SSID, AX25_CommandResponse.COMMAND, false)
+const encoded = addr.encode()
+const decoded = AX25_Address.decode(encoded)
+
+// Create UI frame
+const frame = AX25_Frame.createUIFrame('K6ABC', 0 as AX25_SSID, Buffer.from('Hello'))
+const bytes = frame.encode()
 ```
 
 ### PackChat Protocol - TODO
@@ -228,8 +243,8 @@ Tests go in `spec/` mirroring the `lib/` structure. Custom matchers `toBeTrue()`
 ## Roadmap
 
 ### Next Steps
-1. Implement AX.25 decoder
-2. Add AX.25 test coverage
+1. Implement AX.25 frame decoder
+2. Add AX.25 frame test coverage
 3. Implement PackChat protocol encoder/decoder
 4. Add message ID generation
 5. Create root index.ts for package exports
