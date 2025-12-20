@@ -21,15 +21,16 @@ import { AX25_Callsign, AX25_SSID } from './ax25-types'
  * ╰─────────────┴─────────────┴─────────┴──────┴─────────────╯
  *
  * Example usage:
- * const frame = new AX25_Frame('K6ABC', 0 as AX25_SSID, Buffer.from('Hello'))
+ * const encoder = new TextEncoder()
+ * const frame = new AX25_Frame('K6ABC', 0 as AX25_SSID, encoder.encode('Hello'))
  * const encoded = frame.encode()
  */
 export class AX25_Frame {
   #callsign: AX25_Callsign
   #ssid: AX25_SSID
-  #info: Buffer
+  #info: Uint8Array
 
-  constructor(callsign: AX25_Callsign, ssid: AX25_SSID, info: Buffer) {
+  constructor(callsign: AX25_Callsign, ssid: AX25_SSID, info: Uint8Array) {
     this.#callsign = callsign
     this.#ssid = ssid
     this.#info = info
@@ -46,16 +47,16 @@ export class AX25_Frame {
   }
 
   /** Information field payload */
-  get info(): Buffer {
+  get info(): Uint8Array {
     return this.#info
   }
 
   /**
    * Encode this AX.25 UI frame into bytes ready for KISS wrapping
    *
-   * @returns Buffer ready to wrap in KISS frame
+   * @returns Uint8Array ready to wrap in KISS frame
    */
-  encode(): Buffer {
+  encode(): Uint8Array {
     return encodeAX25_Frame(this.#callsign, this.#ssid, this.#info)
   }
 
@@ -69,7 +70,7 @@ export class AX25_Frame {
    * @returns Decoded AX.25 frame
    * @throws Error if not a UI frame with PID 0xF0
    */
-  static decode(buffer: Buffer): AX25_Frame {
+  static decode(buffer: Uint8Array): AX25_Frame {
     return decodeAX25_Frame(buffer)
   }
 }

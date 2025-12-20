@@ -20,7 +20,7 @@ import { AX25_Frame } from './ax25-frame'
  * @returns Parsed AX.25 UI frame
  * @throws Error if buffer is too small, not a UI frame, wrong PID, or has repeaters
  */
-export function decodeAX25_Frame(buffer: Buffer): AX25_Frame {
+export function decodeAX25_Frame(buffer: Uint8Array): AX25_Frame {
   let offset = 0
 
   validateBuffer()

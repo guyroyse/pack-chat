@@ -49,7 +49,7 @@ describe('AX25_Address', () => {
   })
 
   describe('#encode', () => {
-    let encodedAddress: Buffer
+    let encodedAddress: Uint8Array
 
     const template = {
       callsign: 'K6ABC',
@@ -61,37 +61,37 @@ describe('AX25_Address', () => {
       {
         ...template,
         description: 'encodes a simple address',
-        expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
+        expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
       },
       {
         ...template,
         description: 'encodes an address with a short callsign',
         callsign: 'AB',
-        expectedAddress: Buffer.from([0x82, 0x84, 0x40, 0x40, 0x40, 0x40, 0x60])
+        expectedAddress: new Uint8Array([0x82, 0x84, 0x40, 0x40, 0x40, 0x40, 0x60])
       },
       {
         ...template,
         description: 'encodes an address with a full 6-character callsign',
         callsign: 'WB2OSZ',
-        expectedAddress: Buffer.from([0xae, 0x84, 0x64, 0x9e, 0xa6, 0xb4, 0x60])
+        expectedAddress: new Uint8Array([0xae, 0x84, 0x64, 0x9e, 0xa6, 0xb4, 0x60])
       },
       {
         ...template,
         description: 'encodes an address with a non-zero SSID',
         ssid: 15 as AX25_SSID,
-        expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x7e])
+        expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x7e])
       },
       {
         ...template,
         description: 'encodes and address with last address set to false',
         lastAddress: false,
-        expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
+        expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
       },
       {
         ...template,
         description: 'encodes and address with last address set to true',
         lastAddress: true,
-        expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x61])
+        expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x61])
       }
     ])('$description', ({ callsign, ssid, lastAddress, expectedAddress }) => {
       beforeEach(() => {
@@ -107,7 +107,7 @@ describe('AX25_Address', () => {
     let decodedAddress: AX25_Address
 
     const template = {
-      buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
+      buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
       expectedCallsign: 'K6ABC',
       expectedSSID: 0 as AX25_SSID,
       expectedLastAddress: false
@@ -117,36 +117,36 @@ describe('AX25_Address', () => {
       {
         ...template,
         description: 'decodes a simple address',
-        buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
+        buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
       },
       {
         ...template,
         description: 'decodes an address with a short callsign',
-        buffer: Buffer.from([0x82, 0x84, 0x40, 0x40, 0x40, 0x40, 0x60]),
+        buffer: new Uint8Array([0x82, 0x84, 0x40, 0x40, 0x40, 0x40, 0x60]),
         expectedCallsign: 'AB'
       },
       {
         ...template,
         description: 'decodes an address with a full 6-character callsign',
-        buffer: Buffer.from([0xae, 0x84, 0x64, 0x9e, 0xa6, 0xb4, 0x60]),
+        buffer: new Uint8Array([0xae, 0x84, 0x64, 0x9e, 0xa6, 0xb4, 0x60]),
         expectedCallsign: 'WB2OSZ'
       },
       {
         ...template,
         description: 'decodes an address with a non-zero SSID',
-        buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x7e]),
+        buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x7e]),
         expectedSSID: 15 as AX25_SSID
       },
       {
         ...template,
         description: 'decodes an address with last address set to false',
-        buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
+        buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
         expectedLastAddress: false
       },
       {
         ...template,
         description: 'decodes an address with last address set to true',
-        buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x61]),
+        buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x61]),
         expectedLastAddress: true
       }
     ])('$description', ({ buffer, expectedCallsign, expectedSSID, expectedLastAddress }) => {
@@ -160,7 +160,7 @@ describe('AX25_Address', () => {
     })
 
     it('throws error if buffer too small', () => {
-      const buffer = Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40]) // Only 6 bytes
+      const buffer = new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40]) // Only 6 bytes
       expect(() => AX25_Address.decode(buffer)).toThrow('Buffer must be at least 7 bytes')
     })
   })

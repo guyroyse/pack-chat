@@ -75,9 +75,9 @@ export class AX25_Address {
    *
    * @returns 7-byte buffer
    */
-  encode(): Buffer {
+  encode(): Uint8Array {
     // addresses are always 7 bytes
-    const buffer = Buffer.alloc(7)
+    const buffer = new Uint8Array(7)
 
     // left-justified, space-padded callsign
     const paddedCallsign = this.callsign.padEnd(6, ' ')
@@ -107,7 +107,7 @@ export class AX25_Address {
    * @param offset Offset to start reading from (defaults to 0)
    * @returns Decoded AX25_Address instance
    */
-  static decode(buffer: Buffer): AX25_Address {
+  static decode(buffer: Uint8Array): AX25_Address {
     // Validate buffer size
     if (buffer.length < 7) throw new Error(`Buffer must be at least 7 bytes. Got ${buffer.length}`)
 

@@ -21,22 +21,22 @@ import { AX25_Callsign, AX25_SSID } from './ax25-types'
  * @param info Information field payload
  * @returns Buffer ready to wrap in KISS frame
  */
-export function encodeAX25_Frame(callsign: AX25_Callsign, ssid: AX25_SSID, info: Buffer): Buffer {
+export function encodeAX25_Frame(callsign: AX25_Callsign, ssid: AX25_SSID, info: Uint8Array): Uint8Array {
   // Calculate total frame size: dest(7) + source(7) + control(1) + pid(1) + info
   const totalLength = 7 + 7 + 1 + 1 + info.length
 
   // Build frame
-  const buffer = Buffer.alloc(totalLength)
+  const buffer = new Uint8Array(totalLength)
   let offset = 0
 
   // Destination address (extension bit = 0, not last)
   const destWithExtBit = new AX25_Address('APCHAT', 0, false)
-  destWithExtBit.encode().copy(buffer, offset)
+  buffer.set(destWithExtBit.encode(), offset)
   offset += 7
 
   // Source address (extension bit = 1, last address since no repeaters)
   const sourceWithExtBit = new AX25_Address(callsign, ssid, true)
-  sourceWithExtBit.encode().copy(buffer, offset)
+  buffer.set(sourceWithExtBit.encode(), offset)
   offset += 7
 
   // Control field (UI frame)
@@ -46,7 +46,7 @@ export function encodeAX25_Frame(callsign: AX25_Callsign, ssid: AX25_SSID, info:
   buffer[offset++] = 0xf0
 
   // Info field
-  info.copy(buffer, offset)
+  buffer.set(info, offset)
 
   return buffer
 }
