@@ -1,72 +1,52 @@
 /**
- * AX.25 Frame Encoder
+ * AX.25 Frame Encoder (Simplified for PackChat)
  *
- * Builds AX.25 frames for transmission
+ * Encodes AX.25 UI frames with hardcoded control (0x03) and PID (0xF0)
+ * No repeater support - local-only communication
  */
 
-import { AX25_Address } from './ax25-address';
+import { AX25_Address } from './ax25-address'
+import { AX25_Callsign, AX25_SSID } from './ax25-types'
 
 /**
- * Encode an AX.25 frame into bytes
+ * Encode an AX.25 UI frame into bytes
+ *
+ * Hardcodes:
+ * - Control field: 0x03 (UI frame)
+ * - PID: 0xF0 (no layer 3)
+ * - No repeaters (local-only)
  *
  * @param destination Destination address
  * @param source Source address
- * @param repeaters Digipeater path (empty array for direct)
- * @param control Control field value
- * @param pid Protocol ID (undefined if not present)
  * @param info Information field payload
  * @returns Buffer ready to wrap in KISS frame
  */
-export function encodeAX25_Frame(
-  destination: AX25_Address,
-  source: AX25_Address,
-  repeaters: AX25_Address[],
-  control: number,
-  pid: number | undefined,
-  info: Buffer
-): Buffer {
-  const addresses: Buffer[] = [];
-
-  // Destination address (never last)
-  destination.extensionBit = false;
-  addresses.push(destination.encode());
-
-  // Source address (last if no repeaters)
-  source.extensionBit = repeaters.length === 0;
-  addresses.push(source.encode());
-
-  // Repeater addresses (last one has extension bit set)
-  repeaters.forEach((repeater, index) => {
-    repeater.extensionBit = index === repeaters.length - 1;
-    addresses.push(repeater.encode());
-  });
-
-  // Calculate total frame size
-  const addressLength = addresses.reduce((sum, buf) => sum + buf.length, 0);
-  const pidLength = pid !== undefined ? 1 : 0;
-  const totalLength = addressLength + 1 + pidLength + info.length;
+export function encodeAX25_Frame(callsign: AX25_Callsign, ssid: AX25_SSID, info: Buffer): Buffer {
+  // Calculate total frame size: dest(7) + source(7) + control(1) + pid(1) + info
+  const totalLength = 7 + 7 + 1 + 1 + info.length
 
   // Build frame
-  const buffer = Buffer.allocUnsafe(totalLength);
-  let offset = 0;
+  const buffer = Buffer.alloc(totalLength)
+  let offset = 0
 
-  // Copy addresses
-  for (const addr of addresses) {
-    addr.copy(buffer, offset);
-    offset += addr.length;
-  }
+  // Destination address (extension bit = 0, not last)
+  const destWithExtBit = new AX25_Address('APCHAT', 0, false)
+  destWithExtBit.encode().copy(buffer, offset)
+  offset += 7
 
-  // Control field
-  buffer[offset++] = control;
+  // Source address (extension bit = 1, last address since no repeaters)
+  const sourceWithExtBit = new AX25_Address(callsign, ssid, true)
+  sourceWithExtBit.encode().copy(buffer, offset)
+  offset += 7
 
-  // PID (if present)
-  if (pid !== undefined) {
-    buffer[offset++] = pid;
-  }
+  // Control field (UI frame)
+  buffer[offset++] = 0x03
+
+  // PID (no layer 3)
+  buffer[offset++] = 0xf0
 
   // Info field
-  info.copy(buffer, offset);
+  info.copy(buffer, offset)
 
-  return buffer;
+  return buffer
 }
-

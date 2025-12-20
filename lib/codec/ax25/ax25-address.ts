@@ -1,4 +1,4 @@
-import { AX25_Callsign, AX25_SSID, AX25_CommandResponse } from './ax25-types'
+import { AX25_Callsign, AX25_SSID } from './ax25-types'
 
 /**
  * Regex for validating AX.25 callsigns (1-6 alphanumeric characters)
@@ -19,32 +19,32 @@ const CALLSIGN_REGEX = /^[A-Z0-9]{1,6}$/
  * ╰───────────────────────────────────┴─────────────────╯
  *
  * Byte 6 (SSID byte):
- * ╭───┬───┬───┬───┬───┬───┬───┬───╮
- * │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │  Bit position
- * ├───┼───┼───┼───┴───┴───┴───┼───┤
- * │ C │ R │ R │     SSID      │ E │
- * │ / │ e │ e │   (4 bits)    │ x │
- * │ R │ s │ s │               │ t │
- * ╰───┴───┴───┴───────────────┴───╯
+ * ╭───────┬───────┬───────┬───────┬───────┬───────┬───────┬───────╮
+ * │   7   │   6   │   5   │   4   │   3   │   2   │   1   │   0   │  Bit position
+ * ├───────┼───────┼───────┼───────┴───────┴───────┴───────┼───────┤
+ * │ Cmd/  │ Rsrvd │ Rsrvd │             SSID              │ Last  │
+ * │ Resp  │       │       │           (4 bits)            │ Addr  │
+ * ├───────┼───────┼───────┼───────────────────────────────┼───────┤
+ * │   0   │   1   │   1   │          0000 - 1111          │ 0 - 1 │  Value
+ * ╰───────┴───────┴───────┴───────────────────────────────┴───────╯
  *
  * Example:
- * const addr = new AX25_Address('K6ABC', 5, false CommandResponse.COMMAND)
- * const bytes = addr.encode(true)  // Last address in frame
+ * const addr = new AX25_Address('K6ABC', 5 as AX25_SSID, false)
+ * const bytes = addr.encode()
  */
 export class AX25_Address {
   #callsign: AX25_Callsign
   #ssid: AX25_SSID
-  #commandResponse: AX25_CommandResponse
-  #extensionBit: boolean
+  #lastAddress: boolean
 
   /**
    * Create an AX.25 address
    *
    * @param callsign Callsign (up to 6 characters, e.g., "K6ABC")
    * @param ssid Secondary Station Identifier (0-15)
-   * @param commandResponse Command/Response
+   * @param lastAddress True if this is the last address in the frame (sets last address bit)
    */
-  constructor(callsign: AX25_Callsign, ssid: AX25_SSID, commandResponse: AX25_CommandResponse, extensionBit: boolean) {
+  constructor(callsign: AX25_Callsign, ssid: AX25_SSID, lastAddress: boolean) {
     // Validate callsign
     const valid = CALLSIGN_REGEX.test(callsign)
     if (!valid) throw new Error(`Callsign must be 1-6 alphanumeric and uppercase characters. Got ${callsign}`)
@@ -52,8 +52,7 @@ export class AX25_Address {
     // Assign properties
     this.#callsign = callsign
     this.#ssid = ssid
-    this.#commandResponse = commandResponse
-    this.#extensionBit = extensionBit
+    this.#lastAddress = lastAddress
   }
 
   /** Callsign (1-6 uppercase alphanumeric characters) */
@@ -66,14 +65,9 @@ export class AX25_Address {
     return this.#ssid
   }
 
-  /** Command/Response */
-  get commandResponse(): AX25_CommandResponse {
-    return this.#commandResponse
-  }
-
-  /** Extension bit (0 = more addresses follow, 1 = last address) */
-  get extensionBit(): boolean {
-    return this.#extensionBit
+  /** Last address bit (0 = more addresses follow, 1 = last address) */
+  get lastAddress(): boolean {
+    return this.#lastAddress
   }
 
   /**
@@ -96,10 +90,9 @@ export class AX25_Address {
     // Encode SSID byte
     let ssidByte = 0b0000000
 
-    ssidByte |= this.extensionBit ? 0b00000001 : 0b00000000
+    ssidByte |= this.#lastAddress ? 0b00000001 : 0b00000000
     ssidByte |= this.ssid << 1
     ssidByte |= 0b01100000
-    ssidByte |= this.commandResponse << 7
 
     buffer[6] = ssidByte
 
@@ -130,12 +123,14 @@ export class AX25_Address {
     // Decode SSID byte
     const ssidByte = buffer[6]
 
-    const extensionBit = (ssidByte & 0b00000001) !== 0 // Bit 0
+    const lastAddress = (ssidByte & 0b00000001) !== 0 // Bit 0
     const ssid = ((ssidByte & 0b00011110) >> 1) as AX25_SSID // Bits 1-4
     const commandResponseBit = (ssidByte & 0b10000000) !== 0 // Bit 7
-    const commandResponse = commandResponseBit ? AX25_CommandResponse.RESPONSE : AX25_CommandResponse.COMMAND
+
+    if (commandResponseBit)
+      throw new Error('Unsupported AX.25 address: Command/Response bit set. Only RESPONSE addresses are supported.')
 
     // Create instance
-    return new AX25_Address(trimmedCallsign, ssid, commandResponse, extensionBit)
+    return new AX25_Address(trimmedCallsign, ssid, lastAddress)
   }
 }

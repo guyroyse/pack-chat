@@ -1,53 +1,48 @@
-import { AX25_Address, AX25_SSID, AX25_CommandResponse } from '@lib/codec/ax25'
+import { AX25_Address, AX25_SSID } from '@lib/codec/ax25'
 
 describe('AX25_Address', () => {
   describe('constructor', () => {
     it('stores the callsign', () => {
-      const address = new AX25_Address('K6ABC', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, false)
+      const address = new AX25_Address('K6ABC', 0 as AX25_SSID, false)
       expect(address.callsign).toBe('K6ABC')
     })
 
     it('stores the SSID', () => {
-      const address = new AX25_Address('K6ABC', 5 as AX25_SSID, AX25_CommandResponse.COMMAND, false)
+      const address = new AX25_Address('K6ABC', 5 as AX25_SSID, false)
       expect(address.ssid).toBe(5)
     })
 
-    it('stores the command/response', () => {
-      const address = new AX25_Address('K6ABC', 0 as AX25_SSID, AX25_CommandResponse.RESPONSE, false)
-      expect(address.commandResponse).toBe(AX25_CommandResponse.RESPONSE)
-    })
-
-    it('stores the extension bit', () => {
-      const address = new AX25_Address('K6ABC', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, true)
-      expect(address.extensionBit).toBe(true)
+    it('stores the last address bit', () => {
+      const address = new AX25_Address('K6ABC', 0 as AX25_SSID, true)
+      expect(address.lastAddress).toBe(true)
     })
 
     it('throws error for empty callsign', () => {
-      expect(() => new AX25_Address('', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, false)).toThrow(
+      expect(() => new AX25_Address('', 0 as AX25_SSID, false)).toThrow(
         'Callsign must be 1-6 alphanumeric and uppercase characters'
       )
     })
 
     it('throws error for callsign > 6 characters', () => {
-      expect(() => new AX25_Address('TOOLONG', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, false)).toThrow(
+      expect(() => new AX25_Address('TOOLONG', 0 as AX25_SSID, false)).toThrow(
         'Callsign must be 1-6 alphanumeric and uppercase characters'
       )
     })
 
     it('throws error for lowercase callsign', () => {
-      expect(() => new AX25_Address('k6abc', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, false)).toThrow(
+      expect(() => new AX25_Address('k6abc', 0 as AX25_SSID, false)).toThrow(
         'Callsign must be 1-6 alphanumeric and uppercase characters'
       )
     })
 
     it('throws error for callsign with invalid characters', () => {
-      expect(() => new AX25_Address('K6-ABC', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, false)).toThrow(
+      expect(() => new AX25_Address('K6-ABC', 0 as AX25_SSID, false)).toThrow(
         'Callsign must be 1-6 alphanumeric and uppercase characters'
       )
     })
 
     it('throws error for callsign with spaces', () => {
-      expect(() => new AX25_Address('K6 ABC', 0 as AX25_SSID, AX25_CommandResponse.COMMAND, false)).toThrow(
+      expect(() => new AX25_Address('K6 ABC', 0 as AX25_SSID, false)).toThrow(
         'Callsign must be 1-6 alphanumeric and uppercase characters'
       )
     })
@@ -59,8 +54,7 @@ describe('AX25_Address', () => {
     const template = {
       callsign: 'K6ABC',
       ssid: 0 as AX25_SSID,
-      commandResponse: AX25_CommandResponse.COMMAND,
-      extensionBit: false
+      lastAddress: false
     }
 
     describe.each([
@@ -89,32 +83,19 @@ describe('AX25_Address', () => {
       },
       {
         ...template,
-        description: 'encodes and address with COMMAND bit',
-        commandResponse: AX25_CommandResponse.COMMAND,
+        description: 'encodes and address with last address set to false',
+        lastAddress: false,
         expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
       },
       {
         ...template,
-        description: 'encodes and address with RESPONSE bit',
-        commandResponse: AX25_CommandResponse.RESPONSE,
-        // SSID byte: ext=0, ssid=0000, reserved=11, cr=1 = 0b11100000 = 0xE0
-        expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0xe0])
-      },
-      {
-        ...template,
-        description: 'encodes and address with extension bit false',
-        extensionBit: false,
-        expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
-      },
-      {
-        ...template,
-        description: 'encodes and address with extension bit true',
-        extensionBit: true,
+        description: 'encodes and address with last address set to true',
+        lastAddress: true,
         expectedAddress: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x61])
       }
-    ])('$description', ({ callsign, ssid, commandResponse, extensionBit, expectedAddress }) => {
+    ])('$description', ({ callsign, ssid, lastAddress, expectedAddress }) => {
       beforeEach(() => {
-        const address = new AX25_Address(callsign, ssid, commandResponse, extensionBit)
+        const address = new AX25_Address(callsign, ssid, lastAddress)
         encodedAddress = address.encode()
       })
 
@@ -129,8 +110,7 @@ describe('AX25_Address', () => {
       buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
       expectedCallsign: 'K6ABC',
       expectedSSID: 0 as AX25_SSID,
-      expectedCommandResponse: AX25_CommandResponse.COMMAND,
-      expectedExtensionBit: false
+      expectedLastAddress: false
     }
 
     describe.each([
@@ -159,38 +139,24 @@ describe('AX25_Address', () => {
       },
       {
         ...template,
-        description: 'decodes an address with COMMAND bit',
+        description: 'decodes an address with last address set to false',
         buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
-        expectedCommandResponse: AX25_CommandResponse.COMMAND
+        expectedLastAddress: false
       },
       {
         ...template,
-        description: 'decodes an address with RESPONSE bit',
-        buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0xe0]),
-        expectedCommandResponse: AX25_CommandResponse.RESPONSE
-      },
-      {
-        ...template,
-        description: 'decodes an address with extension bit false',
-        buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
-        expectedExtensionBit: false
-      },
-      {
-        ...template,
-        description: 'decodes an address with extension bit true',
+        description: 'decodes an address with last address set to true',
         buffer: Buffer.from([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x61]),
-        expectedExtensionBit: true
+        expectedLastAddress: true
       }
-    ])('$description', ({ buffer, expectedCallsign, expectedSSID, expectedCommandResponse, expectedExtensionBit }) => {
+    ])('$description', ({ buffer, expectedCallsign, expectedSSID, expectedLastAddress }) => {
       beforeEach(() => {
         decodedAddress = AX25_Address.decode(buffer)
       })
 
       it('has the expected callsign', () => expect(decodedAddress.callsign).toBe(expectedCallsign))
       it('has the expected SSID', () => expect(decodedAddress.ssid).toBe(expectedSSID))
-      it('has the expected command/response', () =>
-        expect(decodedAddress.commandResponse).toBe(expectedCommandResponse))
-      it('has the expected extension bit', () => expect(decodedAddress.extensionBit).toBe(expectedExtensionBit))
+      it('has the expected last address bit', () => expect(decodedAddress.lastAddress).toBe(expectedLastAddress))
     })
 
     it('throws error if buffer too small', () => {

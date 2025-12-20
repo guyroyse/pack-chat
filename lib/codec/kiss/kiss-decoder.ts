@@ -1,15 +1,19 @@
-import { FEND, FESC, KISS_Command, KISS_Payload, KISS_Port, TFEND, TFESC } from './kiss-types'
+import { FEND, FESC, TFEND, TFESC } from './kiss-types'
 
 /**
- * Decode a KISS frame from raw bytes
+ * Decode a KISS DATA_FRAME from raw bytes (Simplified for PackChat)
+ *
+ * Only supports DATA_FRAME (0x00) on port 0.
+ * Throws an error for any other command or port.
  *
  * @param bytes - Raw bytes containing a KISS frame
- * @returns Tuple of [port, command, payload, remainder]
+ * @returns Tuple of [payload, remainder]
+ * @throws Error if not a DATA_FRAME on port 0
  */
-export function decodeKISS_Frame(bytes: Uint8Array): [KISS_Port, KISS_Command, KISS_Payload, Uint8Array] {
+export function decodeKISS_Frame(bytes: Uint8Array): [Uint8Array, Uint8Array] {
   enum State {
     START_OF_FRAME,
-    IN_PORT_AND_COMMAND_BYTE,
+    IN_COMMAND_BYTE,
     IN_PAYLOAD,
     ESCAPING_PAYLOAD,
     END_OF_FRAME
@@ -17,8 +21,6 @@ export function decodeKISS_Frame(bytes: Uint8Array): [KISS_Port, KISS_Command, K
 
   let state = State.START_OF_FRAME
   let index: number
-  let port: KISS_Port = 0
-  let command: KISS_Command = KISS_Command.DATA_FRAME
   let payload: number[] = []
 
   outer: for (index = 0; index < bytes.length; index++) {
@@ -26,10 +28,10 @@ export function decodeKISS_Frame(bytes: Uint8Array): [KISS_Port, KISS_Command, K
 
     switch (state) {
       case State.START_OF_FRAME:
-        state = processStartOfPacket(byte)
+        state = processStartOfFrame(byte)
         break
-      case State.IN_PORT_AND_COMMAND_BYTE:
-        state = processPortAndCommandByte(byte)
+      case State.IN_COMMAND_BYTE:
+        state = processCommandByte(byte)
         break
       case State.IN_PAYLOAD:
         state = processPayloadByte(byte)
@@ -46,22 +48,23 @@ export function decodeKISS_Frame(bytes: Uint8Array): [KISS_Port, KISS_Command, K
 
   if (state !== State.END_OF_FRAME) throw new Error('Incomplete KISS frame')
 
-  return [port, command, new Uint8Array(payload), bytes.subarray(index)]
+  return [new Uint8Array(payload), bytes.subarray(index)]
 
-  function processStartOfPacket(byte: number): State {
-    if (byte === FEND) return State.IN_PORT_AND_COMMAND_BYTE
-    throw new Error('KISS packet does not start with FEND')
+  function processStartOfFrame(byte: number): State {
+    if (byte === FEND) return State.IN_COMMAND_BYTE
+    throw new Error('KISS frame does not start with FEND')
   }
 
-  function processPortAndCommandByte(byte: number): State {
-    if (byte === 0xff) {
-      port = null
-      command = KISS_Command.RETURN
-    } else {
-      port = ((byte >> 4) & 0x0f) as KISS_Port
-      const commandValue = byte & 0x0f
-      if (commandValue < 0 || commandValue > 0x06) throw new Error('Invalid KISS command')
-      command = commandValue as KISS_Command
+  function processCommandByte(byte: number): State {
+    // Validate port (upper 4 bits must be 0)
+    const port = (byte >> 4) & 0x0f
+    if (port !== 0) throw new Error(`Unsupported KISS port. Only port 0 is supported. Got port ${port}`)
+
+    // Validate command (lower 4 bits must be 0 for DATA_FRAME)
+    const command = byte & 0x0f
+    if (command !== 0x00) {
+      const commandString = `0x${command.toString(16).padStart(2, '0')}`
+      throw new Error(`Unsupported KISS command. Only DATA_FRAME (0x00) is supported. Got command ${commandString}`)
     }
 
     return State.IN_PAYLOAD
@@ -75,7 +78,9 @@ export function decodeKISS_Frame(bytes: Uint8Array): [KISS_Port, KISS_Command, K
   }
 
   function processEscapedByte(transposedByte: number): State {
-    if (transposedByte !== TFESC && transposedByte !== TFEND) throw new Error('Invalid escape sequence in dataframe')
+    if (transposedByte !== TFESC && transposedByte !== TFEND) {
+      throw new Error('Invalid escape sequence in KISS frame')
+    }
     payload.push(transposedByte === TFESC ? FESC : FEND)
     return State.IN_PAYLOAD
   }

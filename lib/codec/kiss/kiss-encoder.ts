@@ -1,30 +1,29 @@
-import { FEND, FESC, KISS_Command, KISS_Port, TFEND, TFESC } from './kiss-types'
+import { FEND, FESC, TFEND, TFESC } from './kiss-types'
 
 /**
- * Encode a KISS frame into bytes ready for transmission
+ * Encode a KISS DATA_FRAME into bytes ready for transmission (Simplified for PackChat)
  *
- * Format: [FEND] [CMD] [PAYLOAD...] [FEND]
+ * Hardcodes:
+ * - Port: 0
+ * - Command: 0x00 (DATA_FRAME)
  *
- * @param port - KISS port number (0-15), or null for RETURN commands
- * @param command - KISS command code
- * @param payload - Frame payload
+ * Format: [FEND] [0x00] [PAYLOAD...] [FEND]
+ *
+ * @param payload - Frame payload (AX.25 packet data)
  * @returns Uint8Array ready to send to TNC
  */
-export function encodeKISS_Frame(port: KISS_Port, command: KISS_Command, payload: Uint8Array): Uint8Array {
-  // Construct command byte
-  const portAndCommandByte = command === KISS_Command.RETURN ? 0xff : ((port ?? 0) << 4) | command
-
+export function encodeKISS_Frame(payload: Uint8Array): Uint8Array {
   // Escape payload bytes
   const payloadBytes = escapePayload(payload)
 
-  // Build the frame
+  // Build the frame: FEND + 0x00 + escaped_payload + FEND
   const totalLength = payloadBytes.length + 3
   const buffer = new Uint8Array(totalLength)
 
-  buffer[0] = FEND
-  buffer[1] = portAndCommandByte
-  buffer.set(payloadBytes, 2)
-  buffer[totalLength - 1] = FEND
+  buffer[0] = FEND // Frame start
+  buffer[1] = 0x00 // Port 0, DATA_FRAME command
+  buffer.set(payloadBytes, 2) // Escaped payload
+  buffer[totalLength - 1] = FEND // Frame end
 
   return buffer
 }
