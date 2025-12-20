@@ -10,7 +10,7 @@ PackChat provides protocol codecs for building chat applications over VHF/UHF pa
 
 - **Language**: TypeScript (strict mode)
 - **Module System**: ESM (ECMAScript modules)
-- **Runtime**: Node.js
+- **Runtime**: Node.js / Browser (uses Uint8Array, not Buffer)
 - **Test Framework**: Vitest
 - **Zero production dependencies**
 
@@ -62,24 +62,25 @@ pack-chat/
 │       │   ├── kiss-encoder.ts   # Binary encoding
 │       │   ├── kiss-decoder.ts   # Binary decoding (state machine)
 │       │   └── index.ts          # Public exports
-│       ├── ax25/                 # AX.25 protocol (PARTIAL)
+│       ├── ax25/                 # AX.25 protocol (COMPLETE)
 │       │   ├── ax25-types.ts     # Frame and address types
 │       │   ├── ax25-address.ts   # AX25_Address class
 │       │   ├── ax25-frame.ts     # AX25_Frame class
 │       │   ├── ax25-encoder.ts   # Frame encoding (COMPLETE)
-│       │   ├── ax25-decoder.ts   # Frame decoding (TODO)
+│       │   ├── ax25-decoder.ts   # Frame decoding (COMPLETE)
 │       │   └── index.ts          # Public exports
 │       └── pack-chat/            # PackChat protocol (TODO)
 │           ├── types.ts          # Message types and interfaces
 │           └── index.ts          # Public exports
 ├── spec/                         # Test files
 │   └── codec/
-│       ├── kiss/                 # KISS protocol tests (93 tests)
+│       ├── kiss/                 # KISS protocol tests (25 tests)
 │       │   ├── kiss-frame.spec.ts
 │       │   ├── kiss-encoder.spec.ts
 │       │   └── kiss-decoder.spec.ts
-│       └── ax25/                 # AX.25 protocol tests (53 tests)
-│           └── ax25-address.spec.ts
+│       └── ax25/                 # AX.25 protocol tests (43 tests)
+│           ├── ax25-address.spec.ts
+│           └── ax25-frame.spec.ts
 ├── dist/                         # Compiled output
 ├── package.json
 ├── tsconfig.json                 # TypeScript config (includes tests)
@@ -93,57 +94,59 @@ pack-chat/
 
 ### KISS Protocol - COMPLETE
 
-Full implementation with 93 passing tests.
+Simplified implementation with 25 passing tests.
 
 **Features:**
 - Frame encoding/decoding with FEND delimiters (0xC0)
 - Special character escaping (0xC0 → 0xDB 0xDC, 0xDB → 0xDB 0xDD)
-- All 8 KISS commands: DATA_FRAME, TX_DELAY, PERSISTENCE, SLOT_TIME, TX_TAIL, FULL_DUPLEX, SET_HARDWARE, RETURN
-- Port number support (0-15)
+- **Simplified**: Only supports DATA_FRAME (0x00) on port 0
 - State machine decoder with remainder handling for streaming
-- Comprehensive error handling (invalid escapes, incomplete frames, invalid commands)
+- Comprehensive error handling (invalid escapes, incomplete frames, unsupported commands/ports)
+- Uses Uint8Array (browser/Electron compatible)
 
 **Usage:**
 ```typescript
-import { KISS_Frame, KISS_Command } from '@lib/codec/kiss'
+import { KISS_Frame } from '@lib/codec/kiss'
 
 // Encode
-const frame = new KISS_Frame(0, KISS_Command.DATA_FRAME, payload)
+const payload = new Uint8Array([0x01, 0x02, 0x03])
+const frame = new KISS_Frame(payload)
 const bytes = frame.encode()
 
 // Decode (handles partial frames, returns remainder)
 const [decoded, remainder] = KISS_Frame.decode(buffer)
 ```
 
-### AX.25 Protocol - PARTIAL
+### AX.25 Protocol - COMPLETE
 
-53 tests passing for address encoding/decoding.
+Simplified implementation with 43 passing tests (33 address + 10 frame).
 
-**Complete:**
-- Type definitions with type safety (AX25_SSID, AX25_CommandResponse, AX25_Callsign)
+**Features:**
+- Type definitions with type safety (AX25_SSID, AX25_Callsign)
 - AX25_Address class with encode/decode methods
 - AX25_Frame class following KISS_Frame pattern
-- Frame encoding with proper address bit-shifting
-- `createUIFrame()` static method for connectionless frames
-- Repeater path support
-- Comprehensive address test coverage (constructor, encode, decode, round-trip)
-
-**TODO:**
-- Frame decoding (`decodeAX25_Frame()`)
-- Frame test coverage
+- Frame encoding/decoding with proper address bit-shifting
+- **Simplified**: Only supports UI frames (0x03) with PID 0xF0
+- **Simplified**: Hardcoded destination APCHAT-0 (no repeaters)
+- Comprehensive test coverage (address + frame encode/decode)
+- Uses Uint8Array (browser/Electron compatible)
 
 **Usage:**
 ```typescript
-import { AX25_Frame, AX25_Address, AX25_SSID, AX25_CommandResponse } from '@lib/codec/ax25'
+import { AX25_Frame, AX25_Address, AX25_SSID } from '@lib/codec/ax25'
 
 // Create address
-const addr = new AX25_Address('K6ABC', 5 as AX25_SSID, AX25_CommandResponse.COMMAND, false)
-const encoded = addr.encode()
+const addr = new AX25_Address('K6ABC', 5 as AX25_SSID, false)
+const encoded = addr.encode()  // Returns Uint8Array
 const decoded = AX25_Address.decode(encoded)
 
 // Create UI frame
-const frame = AX25_Frame.createUIFrame('K6ABC', 0 as AX25_SSID, Buffer.from('Hello'))
-const bytes = frame.encode()
+const encoder = new TextEncoder()
+const frame = new AX25_Frame('K6ABC', 0 as AX25_SSID, encoder.encode('Hello'))
+const bytes = frame.encode()  // Returns Uint8Array
+
+// Decode frame
+const decoded = AX25_Frame.decode(bytes)
 ```
 
 ### PackChat Protocol - TODO
@@ -159,36 +162,41 @@ Only type definitions exist. Needs:
 
 **Frame Format:**
 ```
-[FEND] [CMD] [DATA...] [FEND]
+[FEND] [0x00] [DATA...] [FEND]
 ```
 
 - `FEND` = 0xC0 (frame delimiter)
-- `CMD` = port (upper 4 bits) + command (lower 4 bits)
+- `CMD` = 0x00 (port 0, DATA_FRAME command - hardcoded)
 - Escaping in DATA only:
   - 0xC0 → 0xDB 0xDC (FESC + TFEND)
   - 0xDB → 0xDB 0xDD (FESC + TFESC)
 
+**Note:** This implementation only supports DATA_FRAME (0x00) on port 0. Other commands/ports will throw an error.
+
 ### AX.25 Packet Structure
 
+**Simplified PackChat UI Frame:**
 ```
-┌──────────────┬──────────────┬──────────┬─────────┬─────┬──────────┐
-│ Destination  │   Source     │ Repeaters│ Control │ PID │   Info   │
-│   (7 bytes)  │  (7 bytes)   │ (0-56 B) │ (1-2 B) │(0-1)│ (0-256)  │
-└──────────────┴──────────────┴──────────┴─────────┴─────┴──────────┘
+┌──────────────┬──────────────┬─────────┬─────┬──────────┐
+│ Destination  │   Source     │ Control │ PID │   Info   │
+│   7 bytes    │   7 bytes    │  0x03   │0xF0 │ 0-256 B  │
+│  APCHAT-0    │  (varies)    │         │     │          │
+└──────────────┴──────────────┴─────────┴─────┴──────────┘
 ```
 
 **Address Encoding (7 bytes each):**
 - Bytes 0-5: Callsign (ASCII, left-justified, space-padded, shifted left 1 bit)
 - Byte 6: SSID and flags
   - Bits 1-4: SSID (0-15)
-  - Bit 5: Reserved
-  - Bit 6: Command/Response
-  - Bit 7: Extension bit (1 = last address)
+  - Bits 5-6: Reserved (always 0b11)
+  - Bit 7: Command/Response (always 0 for PackChat)
+  - Bit 0: Last address bit (0 = more addresses, 1 = last)
 
-**PackChat defaults:**
-- Destination: `APCHAT-0`
-- Control: 0x03 (UI frame)
-- PID: 0xF0 (no layer 3)
+**PackChat restrictions:**
+- Destination: Always `APCHAT-0` (hardcoded)
+- Control: Always 0x03 (UI frame, hardcoded)
+- PID: Always 0xF0 (no layer 3, hardcoded)
+- Repeaters: Not supported (local-only communication)
 
 ### PackChat Protocol (Planned)
 
@@ -243,8 +251,8 @@ Tests go in `spec/` mirroring the `lib/` structure. Custom matchers `toBeTrue()`
 ## Roadmap
 
 ### Next Steps
-1. Implement AX.25 frame decoder
-2. Add AX.25 frame test coverage
+1. ~~Implement AX.25 frame decoder~~ ✅ DONE
+2. ~~Add AX.25 frame test coverage~~ ✅ DONE
 3. Implement PackChat protocol encoder/decoder
 4. Add message ID generation
 5. Create root index.ts for package exports
