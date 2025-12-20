@@ -28,8 +28,7 @@ PackChat provides protocol codecs for building chat applications over VHF/UHF pa
 │     PackChat Protocol               │
 │  - Message types (root, reply, etc) │
 │  - Message ID generation            │
-│  - Channel/DM addressing            │
-│  - Flags (private, emote)           │
+│  - Channel addressing               │
 └─────────────────────────────────────┘
                  ↕
 ┌─────────────────────────────────────┐
@@ -97,6 +96,7 @@ pack-chat/
 Simplified implementation with 25 passing tests.
 
 **Features:**
+
 - Frame encoding/decoding with FEND delimiters (0xC0)
 - Special character escaping (0xC0 → 0xDB 0xDC, 0xDB → 0xDB 0xDD)
 - **Simplified**: Only supports DATA_FRAME (0x00) on port 0
@@ -105,6 +105,7 @@ Simplified implementation with 25 passing tests.
 - Uses Uint8Array (browser/Electron compatible)
 
 **Usage:**
+
 ```typescript
 import { KISS_Frame } from '@lib/codec/kiss'
 
@@ -122,6 +123,7 @@ const [decoded, remainder] = KISS_Frame.decode(buffer)
 Simplified implementation with 43 passing tests (33 address + 10 frame).
 
 **Features:**
+
 - Type definitions with type safety (AX25_SSID, AX25_Callsign)
 - AX25_Address class with encode/decode methods
 - AX25_Frame class following KISS_Frame pattern
@@ -132,18 +134,19 @@ Simplified implementation with 43 passing tests (33 address + 10 frame).
 - Uses Uint8Array (browser/Electron compatible)
 
 **Usage:**
+
 ```typescript
 import { AX25_Frame, AX25_Address, AX25_SSID } from '@lib/codec/ax25'
 
 // Create address
 const addr = new AX25_Address('K6ABC', 5 as AX25_SSID, false)
-const encoded = addr.encode()  // Returns Uint8Array
+const encoded = addr.encode() // Returns Uint8Array
 const decoded = AX25_Address.decode(encoded)
 
 // Create UI frame
 const encoder = new TextEncoder()
 const frame = new AX25_Frame('K6ABC', 0 as AX25_SSID, encoder.encode('Hello'))
-const bytes = frame.encode()  // Returns Uint8Array
+const bytes = frame.encode() // Returns Uint8Array
 
 // Decode frame
 const decoded = AX25_Frame.decode(bytes)
@@ -152,6 +155,7 @@ const decoded = AX25_Frame.decode(bytes)
 ### PackChat Protocol - TODO
 
 Only type definitions exist. Needs:
+
 - Protocol encoder
 - Protocol decoder
 - Message ID generation (48-bit timestamp + 16-bit random)
@@ -161,6 +165,7 @@ Only type definitions exist. Needs:
 ### KISS Protocol
 
 **Frame Format:**
+
 ```
 [FEND] [0x00] [DATA...] [FEND]
 ```
@@ -176,6 +181,7 @@ Only type definitions exist. Needs:
 ### AX.25 Packet Structure
 
 **Simplified PackChat UI Frame:**
+
 ```
 ┌──────────────┬──────────────┬─────────┬─────┬──────────┐
 │ Destination  │   Source     │ Control │ PID │   Info   │
@@ -185,6 +191,7 @@ Only type definitions exist. Needs:
 ```
 
 **Address Encoding (7 bytes each):**
+
 - Bytes 0-5: Callsign (ASCII, left-justified, space-padded, shifted left 1 bit)
 - Byte 6: SSID and flags
   - Bits 1-4: SSID (0-15)
@@ -193,6 +200,7 @@ Only type definitions exist. Needs:
   - Bit 0: Last address bit (0 = more addresses, 1 = last)
 
 **PackChat restrictions:**
+
 - Destination: Always `APCHAT-0` (hardcoded)
 - Control: Always 0x03 (UI frame, hardcoded)
 - PID: Always 0xF0 (no layer 3, hardcoded)
@@ -201,31 +209,78 @@ Only type definitions exist. Needs:
 ### PackChat Protocol (Planned)
 
 **Info Field Format:**
+
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ Header (9 bytes)                                             │
-├──────────────────────────────────────────────────────────────┤
-│ Byte 0: Version (bits 0-3) | Type (bits 4-7)                │
-│ Byte 1: Flags (is_private, is_emote)                        │
-│ Bytes 2-8: Channel/Destination (AX.25 address format)       │
-├──────────────────────────────────────────────────────────────┤
-│ Variable ID Fields (8 bytes each, uint64 big-endian)        │
-├──────────────────────────────────────────────────────────────┤
-│ Message Text (UTF-8, remaining bytes)                       │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│ Header (8 bytes)                                           │
+├────────────────────────────────────────────────────────────┤
+│ Byte 0: Version|Type|Reserved                              │
+│   Bits 7-5: Version (3 bits, current = 0)                  │
+│   Bits 4-2: Type (3 bits, 0-7)                             │
+│   Bits 1-0: Reserved (must be 0)                           │
+│ Bytes 1-7: Channel name (7-byte ASCII)                     │
+├────────────────────────────────────────────────────────────┤
+│ Variable ID Fields (8 bytes each, uint64 big-endian)       │
+├────────────────────────────────────────────────────────────┤
+│ Message Text (UTF-8, max 224 bytes)                        │
+└────────────────────────────────────────────────────────────┘
 ```
+
+**Byte 0 Layout:**
+
+```
+Bit:  7   6   5 | 4   3   2 | 1   0
+     [Version ] | [ Type  ] | [Res]
+      3 bits      3 bits      2 bits
+```
+
+**Channel Name (Bytes 1-7):**
+
+- 7 bytes ASCII alphanumeric
+- Lowercase letters (a-z), numbers (0-9), hyphens (-)
+- Must start with a letter (a-z)
+- Must end with a letter or number (not hyphen)
+- Right-padded with spaces (0x20)
+- Examples: `general`, `cq`, `newbie`, `random`, `dev-2`, `ham-net`
 
 **Message Types:**
-- `0000` (Root): Normal message [message_id] [text]
-- `0001` (Reply): Thread reply [message_id] [reply_to_id] [text]
-- `0010` (Reaction): Emoji reaction [react_to_id] [emoji]
-- `0011` (Edit): Edit message [message_id] [edit_id] [new_text]
-- `0100` (Delete): Delete message [message_id] [delete_id]
+
+- `000` (0x0 - ROOT): Normal message [message_id] [text]
+- `001` (0x1 - REPLY): Thread reply [message_id] [reply_to_id] [text]
+- `010` (0x2 - REACTION): Emoji reaction [react_to_id] [emoji]
+- `011` (0x3 - EDIT): Edit message [message_id] [edit_id] [new_text]
+- `100` (0x4 - DELETE): Delete message [message_id] [delete_id] (no text)
+- `101-111` (0x5-0x7): Reserved for future use
+
+**Message Size Limits:**
+
+```
+Type        Header  IDs      Max Text  Total   Notes
+────────────────────────────────────────────────────────────
+ROOT        8 B     8 B      224 B     240 B   16 B unused
+REPLY       8 B     16 B     224 B     248 B   8 B unused
+REACTION    8 B     8 B      224 B     240 B   16 B unused
+EDIT        8 B     16 B     224 B     248 B   8 B unused
+DELETE      8 B     16 B     0 B       24 B    No text field
+```
+
+**Max text = 224 bytes** (enforced for all types to ensure ROOT messages can always be edited and to allow future message types with up to 3 IDs)
 
 **Message ID Format:**
+
 - 64-bit unsigned integer (big-endian)
 - Upper 48 bits: milliseconds since Unix epoch
 - Lower 16 bits: random value
+
+**Example - ROOT message to #general:**
+
+```
+Byte 0:    0x00 (version=0, type=0, reserved=0)
+           Binary: 00000000
+Bytes 1-7: "general" → 0x67 0x65 0x6E 0x65 0x72 0x61 0x6C
+Bytes 8-15: message_id (uint64 big-endian)
+Bytes 16+:  "Hello world!" (UTF-8, max 224 bytes)
+```
 
 ## Development
 
@@ -251,6 +306,7 @@ Tests go in `spec/` mirroring the `lib/` structure. Custom matchers `toBeTrue()`
 ## Roadmap
 
 ### Next Steps
+
 1. ~~Implement AX.25 frame decoder~~ ✅ DONE
 2. ~~Add AX.25 frame test coverage~~ ✅ DONE
 3. Implement PackChat protocol encoder/decoder
@@ -258,6 +314,7 @@ Tests go in `spec/` mirroring the `lib/` structure. Custom matchers `toBeTrue()`
 5. Create root index.ts for package exports
 
 ### Future
+
 - TCP client for TNC connection
 - Message deduplication
 - Channel/DM state management
