@@ -53,40 +53,57 @@ PackChat provides protocol codecs for building chat applications over VHF/UHF pa
 
 ```
 pack-chat/
-├── lib/                          # Source code
+├── lib/                                # Source code
 │   └── codec/
-│       ├── kiss/                 # KISS protocol (COMPLETE)
-│       │   ├── kiss-types.ts     # Constants and type definitions
-│       │   ├── kiss-frame.ts     # KISS_Frame class
-│       │   ├── kiss-encoder.ts   # Binary encoding
-│       │   ├── kiss-decoder.ts   # Binary decoding (state machine)
-│       │   └── index.ts          # Public exports
-│       ├── ax25/                 # AX.25 protocol (COMPLETE)
-│       │   ├── ax25-types.ts     # Frame and address types
-│       │   ├── ax25-address.ts   # AX25_Address class
-│       │   ├── ax25-frame.ts     # AX25_Frame class
-│       │   ├── ax25-encoder.ts   # Frame encoding (COMPLETE)
-│       │   ├── ax25-decoder.ts   # Frame decoding (COMPLETE)
-│       │   └── index.ts          # Public exports
-│       └── pack-chat/            # PackChat protocol (TODO)
-│           ├── types.ts          # Message types and interfaces
-│           └── index.ts          # Public exports
-├── spec/                         # Test files
+│       ├── kiss/                       # KISS protocol (COMPLETE)
+│       │   ├── kiss-types.ts           # Constants and type definitions
+│       │   ├── kiss-frame.ts           # KISS_Frame class
+│       │   ├── kiss-encoder.ts         # Binary encoding
+│       │   ├── kiss-decoder.ts         # Binary decoding (state machine)
+│       │   └── index.ts                # Public exports
+│       ├── ax25/                       # AX.25 protocol (COMPLETE)
+│       │   ├── ax25-types.ts           # Frame and address types
+│       │   ├── ax25-address.ts         # AX25_Address class
+│       │   ├── ax25-frame.ts           # AX25_Frame class
+│       │   ├── ax25-encoder.ts         # Frame encoding
+│       │   ├── ax25-decoder.ts         # Frame decoding
+│       │   └── index.ts                # Public exports
+│       └── pack-chat/                  # PackChat protocol (COMPLETE)
+│           ├── pack-chat-types.ts      # Message types and constants
+│           ├── pack-chat-channel.ts    # PackChatChannel class
+│           ├── pack-chat-message-id.ts # PackChatMessageId class
+│           ├── pack-chat-message.ts    # Message classes (Root, Reply, etc)
+│           ├── pack-chat-encoder.ts    # Protocol encoder
+│           ├── pack-chat-decoder.ts    # Protocol decoder
+│           └── index.ts                # Public exports
+├── spec/                               # Test files
 │   └── codec/
-│       ├── kiss/                 # KISS protocol tests (25 tests)
+│       ├── kiss/                       # KISS protocol tests (25 tests)
 │       │   ├── kiss-frame.spec.ts
 │       │   ├── kiss-encoder.spec.ts
 │       │   └── kiss-decoder.spec.ts
-│       └── ax25/                 # AX.25 protocol tests (43 tests)
-│           ├── ax25-address.spec.ts
-│           └── ax25-frame.spec.ts
-├── dist/                         # Compiled output
+│       ├── ax25/                       # AX.25 protocol tests (43 tests)
+│       │   ├── ax25-address.spec.ts
+│       │   └── ax25-frame.spec.ts
+│       └── pack-chat/                  # PackChat protocol tests (65 tests)
+│           ├── pack-chat-channel.spec.ts
+│           ├── pack-chat-message-id.spec.ts
+│           ├── pack-chat-decoder.spec.ts
+│           ├── pack-chat-encoder.spec.ts
+│           ├── pack-chat-message.spec.ts
+│           └── messages/               # Message class tests
+│               ├── root-message.spec.ts
+│               ├── reply-message.spec.ts
+│               ├── reaction-message.spec.ts
+│               ├── edit-message.spec.ts
+│               └── delete-message.spec.ts
+├── dist/                               # Compiled output
 ├── package.json
-├── tsconfig.json                 # TypeScript config (includes tests)
-├── tsconfig.build.json           # Build config (lib only)
-├── vitest.config.ts              # Test configuration
-├── vitest.setup.ts               # Custom matchers
-└── CLAUDE.md                     # This file
+├── tsconfig.json                       # TypeScript config (includes tests)
+├── tsconfig.build.json                 # Build config (lib only)
+├── vitest.config.ts                    # Test configuration
+├── vitest.setup.ts                     # Custom matchers
+└── CLAUDE.md                           # This file
 ```
 
 ## Implementation Status
@@ -152,13 +169,38 @@ const bytes = frame.encode() // Returns Uint8Array
 const decoded = AX25_Frame.decode(bytes)
 ```
 
-### PackChat Protocol - TODO
+### PackChat Protocol - COMPLETE
 
-Only type definitions exist. Needs:
+Complete implementation with 65 passing tests.
 
-- Protocol encoder
-- Protocol decoder
-- Message ID generation (48-bit timestamp + 16-bit random)
+**Features:**
+
+- Five message types: ROOT, REPLY, REACTION, EDIT, DELETE
+- PackChatChannel class with name validation
+- PackChatMessageId class (64-bit: 48-bit timestamp + 16-bit random)
+- Message classes for type-safe construction (RootMessage, ReplyMessage, etc.)
+- Protocol encoder with text length validation (max 224 bytes)
+- Protocol decoder with comprehensive error handling
+- Channel name validation (lowercase, alphanumeric, hyphens)
+- UTF-8 text support (including emojis and international characters)
+- Uses Uint8Array (browser/Electron compatible)
+
+**Usage:**
+
+```typescript
+import { PackChatChannel, PackChatMessageId, RootMessage } from '@lib/codec/pack-chat'
+
+// Create a ROOT message
+const channel = new PackChatChannel('general')
+const messageId = PackChatMessageId.generate()
+const message = new RootMessage(channel, messageId, 'Hello world!')
+
+// Encode to bytes
+const bytes = message.encode()
+
+// Decode from bytes
+const decoded = PackChatMessage.decode(bytes)
+```
 
 ## Protocol Details
 
@@ -247,7 +289,7 @@ Bit:  7   6   5 | 4   3   2 | 1   0
 
 - `000` (0x0 - ROOT): Normal message [message_id] [text]
 - `001` (0x1 - REPLY): Thread reply [message_id] [reply_to_id] [text]
-- `010` (0x2 - REACTION): Emoji reaction [react_to_id] [emoji]
+- `010` (0x2 - REACTION): Emoji reaction [message_id] [react_to_id] [emoji]
 - `011` (0x3 - EDIT): Edit message [message_id] [edit_id] [new_text]
 - `100` (0x4 - DELETE): Delete message [message_id] [delete_id] (no text)
 - `101-111` (0x5-0x7): Reserved for future use
@@ -259,7 +301,7 @@ Type        Header  IDs      Max Text  Total   Notes
 ────────────────────────────────────────────────────────────
 ROOT        8 B     8 B      224 B     240 B   16 B unused
 REPLY       8 B     16 B     224 B     248 B   8 B unused
-REACTION    8 B     8 B      224 B     240 B   16 B unused
+REACTION    8 B     16 B     224 B     248 B   8 B unused
 EDIT        8 B     16 B     224 B     248 B   8 B unused
 DELETE      8 B     16 B     0 B       24 B    No text field
 ```
@@ -305,13 +347,18 @@ Tests go in `spec/` mirroring the `lib/` structure. Custom matchers `toBeTrue()`
 
 ## Roadmap
 
-### Next Steps
+### Completed
 
 1. ~~Implement AX.25 frame decoder~~ ✅ DONE
 2. ~~Add AX.25 frame test coverage~~ ✅ DONE
-3. Implement PackChat protocol encoder/decoder
-4. Add message ID generation
-5. Create root index.ts for package exports
+3. ~~Implement PackChat protocol encoder/decoder~~ ✅ DONE
+4. ~~Add message ID generation~~ ✅ DONE
+
+### Next Steps
+
+1. Test with real radio hardware (Direwolf TNC)
+2. Create root index.ts for package exports
+3. Add integration tests (KISS → AX.25 → PackChat)
 
 ### Future
 

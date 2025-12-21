@@ -1,0 +1,48 @@
+import { PackChatChannel } from '@lib/codec/pack-chat/pack-chat-channel'
+import { PackChatMessageId } from '@lib/codec/pack-chat/pack-chat-message-id'
+import { ReactionMessage } from '@lib/codec/pack-chat/pack-chat-message'
+
+const CHANNEL_BYTES = new Uint32Array([0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c])
+const MESSAGE_ID_BYTES = new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0x12, 0x34])
+const REACT_TO_ID_BYTES = new Uint8Array([0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x9a, 0xbc])
+const PARTY_EMOJI_BYTES = new Uint8Array([0xf0, 0x9f, 0x8e, 0x89])
+
+describe('ReactionMessage', () => {
+  const channel = new PackChatChannel('general')
+  const messageId = new PackChatMessageId(0x123456789abc, 0x1234)
+  const reactToId = new PackChatMessageId(0x112233445566, 0x9abc)
+
+  describe('constructor', () => {
+    let message: ReactionMessage
+
+    beforeEach(() => {
+      message = new ReactionMessage(channel, messageId, reactToId, '👍')
+    })
+
+    it('sets channel', () => {
+      expect(message.channel).toBe(channel)
+    })
+
+    it('sets messageId', () => {
+      expect(message.messageId).toBe(messageId)
+    })
+
+    it('sets reactToId', () => {
+      expect(message.reactToId).toBe(reactToId)
+    })
+
+    it('sets emoji', () => {
+      expect(message.emoji).toBe('👍')
+    })
+  })
+
+  describe('#encode()', () => {
+    it('encodes to correct bytes', () => {
+      const message = new ReactionMessage(channel, messageId, reactToId, '🎉')
+      const encoded = message.encode()
+
+      const expected = new Uint8Array([0x08, ...CHANNEL_BYTES, ...MESSAGE_ID_BYTES, ...REACT_TO_ID_BYTES, ...PARTY_EMOJI_BYTES])
+      expect(encoded).toEqual(expected)
+    })
+  })
+})
