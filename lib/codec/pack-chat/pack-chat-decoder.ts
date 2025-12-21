@@ -4,11 +4,11 @@ import {
   HEADER_LENGTH,
   MessageType,
   PackChatMessageData,
-  PackChatRootMessage,
-  PackChatReplyMessage,
-  PackChatReactionMessage,
-  PackChatEditMessage,
-  PackChatDeleteMessage,
+  PackChatRootMessageData,
+  PackChatReplyMessageData,
+  PackChatReactionMessageData,
+  PackChatEditMessageData,
+  PackChatDeleteMessageData,
   PackChatVersion,
   PROTOCOL_VERSION
 } from './pack-chat-types'
@@ -101,7 +101,7 @@ export function decodePackChatMessage(buffer: Uint8Array): PackChatMessageData {
   /**
    * Decode ROOT message: [message_id] [text]
    */
-  function decodeRootMessage(): PackChatRootMessage {
+  function decodeRootMessage(): PackChatRootMessageData {
     if (buffer.length < index + MESSAGE_ID_LENGTH)
       throw new Error(`Buffer too short for ROOT message: expected at least ${MESSAGE_ID_LENGTH} more bytes.`)
 
@@ -123,7 +123,7 @@ export function decodePackChatMessage(buffer: Uint8Array): PackChatMessageData {
   /**
    * Decode REPLY message: [message_id] [reply_to_id] [text]
    */
-  function decodeReplyMessage(): PackChatReplyMessage {
+  function decodeReplyMessage(): PackChatReplyMessageData {
     if (buffer.length < index + MESSAGE_ID_LENGTH + MESSAGE_ID_LENGTH)
       throw new Error(`Buffer too short for REPLY message: expected at least ${MESSAGE_ID_LENGTH * 2} more bytes.`)
 
@@ -150,7 +150,7 @@ export function decodePackChatMessage(buffer: Uint8Array): PackChatMessageData {
   /**
    * Decode REACTION message: [message_id] [react_to_id] [emoji]
    */
-  function decodeReactionMessage(): PackChatReactionMessage {
+  function decodeReactionMessage(): PackChatReactionMessageData {
     if (buffer.length < index + MESSAGE_ID_LENGTH + MESSAGE_ID_LENGTH)
       throw new Error(`Buffer too short for REACTION message: expected at least ${MESSAGE_ID_LENGTH * 2} more bytes.`)
 
@@ -177,7 +177,7 @@ export function decodePackChatMessage(buffer: Uint8Array): PackChatMessageData {
   /**
    * Decode EDIT message: [message_id] [edit_id] [text]
    */
-  function decodeEditMessage(): PackChatEditMessage {
+  function decodeEditMessage(): PackChatEditMessageData {
     if (buffer.length < index + MESSAGE_ID_LENGTH + MESSAGE_ID_LENGTH)
       throw new Error(`Buffer too short for EDIT message: expected at least ${MESSAGE_ID_LENGTH * 2} more bytes.`)
 
@@ -204,7 +204,7 @@ export function decodePackChatMessage(buffer: Uint8Array): PackChatMessageData {
   /**
    * Decode DELETE message: [message_id] [delete_id]
    */
-  function decodeDeleteMessage(): PackChatDeleteMessage {
+  function decodeDeleteMessage(): PackChatDeleteMessageData {
     const expectedRemaining = MESSAGE_ID_LENGTH + MESSAGE_ID_LENGTH
     if (buffer.length !== index + expectedRemaining)
       throw new Error(

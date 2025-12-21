@@ -43,7 +43,7 @@ export type PackChatChannelName = string
 /**
  * ROOT message: Normal message [message_id] [text]
  */
-export type PackChatRootMessage = {
+export type PackChatRootMessageData = {
   type: MessageType.ROOT
   channel: PackChatChannel
   messageId: PackChatMessageId
@@ -53,7 +53,7 @@ export type PackChatRootMessage = {
 /**
  * REPLY message: Thread reply [message_id] [reply_to_id] [text]
  */
-export type PackChatReplyMessage = {
+export type PackChatReplyMessageData = {
   type: MessageType.REPLY
   channel: PackChatChannel
   messageId: PackChatMessageId
@@ -64,7 +64,7 @@ export type PackChatReplyMessage = {
 /**
  * REACTION message: Emoji reaction [message_id] [react_to_id] [emoji]
  */
-export type PackChatReactionMessage = {
+export type PackChatReactionMessageData = {
   type: MessageType.REACTION
   channel: PackChatChannel
   messageId: PackChatMessageId
@@ -75,7 +75,7 @@ export type PackChatReactionMessage = {
 /**
  * EDIT message: Edit message [message_id] [edit_id] [new_text]
  */
-export type PackChatEditMessage = {
+export type PackChatEditMessageData = {
   type: MessageType.EDIT
   channel: PackChatChannel
   messageId: PackChatMessageId
@@ -86,7 +86,7 @@ export type PackChatEditMessage = {
 /**
  * DELETE message: Delete message [message_id] [delete_id] (no text)
  */
-export type PackChatDeleteMessage = {
+export type PackChatDeleteMessageData = {
   type: MessageType.DELETE
   channel: PackChatChannel
   messageId: PackChatMessageId
@@ -97,8 +97,8 @@ export type PackChatDeleteMessage = {
  * Union type for all PackChat message types
  */
 export type PackChatMessageData =
-  | PackChatRootMessage
-  | PackChatReplyMessage
-  | PackChatReactionMessage
-  | PackChatEditMessage
-  | PackChatDeleteMessage
+  | PackChatRootMessageData
+  | PackChatReplyMessageData
+  | PackChatReactionMessageData
+  | PackChatEditMessageData
+  | PackChatDeleteMessageData

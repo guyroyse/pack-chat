@@ -1,11 +1,11 @@
 import { decodePackChatMessage } from '@lib/codec/pack-chat/pack-chat-decoder'
 import {
   MessageType,
-  PackChatRootMessage,
-  PackChatReplyMessage,
-  PackChatReactionMessage,
-  PackChatEditMessage,
-  PackChatDeleteMessage
+  PackChatRootMessageData,
+  PackChatReplyMessageData,
+  PackChatReactionMessageData,
+  PackChatEditMessageData,
+  PackChatDeleteMessageData
 } from '@lib/codec/pack-chat/pack-chat-types'
 
 const ROOT_FORMAT_BYTE = 0x00 // version=0, type=0 (ROOT), reserved=0
@@ -73,7 +73,7 @@ describe('decodePackChatMessage', () => {
   ])('$description', ({ buffer, expectedError }) => expect(() => decodePackChatMessage(buffer)).toThrow(expectedError))
 
   describe('when decoding a ROOT messages', () => {
-    let decoded: PackChatRootMessage
+    let decoded: PackChatRootMessageData
 
     describe.each([
       {
@@ -88,11 +88,16 @@ describe('decodePackChatMessage', () => {
       },
       {
         description: 'with UTF-8 emojis and international characters',
-        buffer: new Uint8Array([ROOT_FORMAT_BYTE, ...CHANNEL_BYTES, ...MESSAGE_ID_BYTES, ...HELLO_EMOJI_WORLD_TEXT_BYTES]),
+        buffer: new Uint8Array([
+          ROOT_FORMAT_BYTE,
+          ...CHANNEL_BYTES,
+          ...MESSAGE_ID_BYTES,
+          ...HELLO_EMOJI_WORLD_TEXT_BYTES
+        ]),
         expectedText: 'Hello 👋 世界'
       }
     ])('$description', ({ buffer, expectedText }) => {
-      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatRootMessage))
+      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatRootMessageData))
 
       it('decodes the message type', () => expect(decoded.type).toBe(MessageType.ROOT))
       it('decodes the channel name', () => expect(decoded.channel.name).toBe(CHANNEL_NAME))
@@ -110,7 +115,7 @@ describe('decodePackChatMessage', () => {
   })
 
   describe('when decoding a REPLY message', () => {
-    let decoded: PackChatReplyMessage
+    let decoded: PackChatReplyMessageData
 
     describe.each([
       {
@@ -125,7 +130,7 @@ describe('decodePackChatMessage', () => {
         expectedText: 'Reply text'
       }
     ])('$description', ({ buffer, expectedText }) => {
-      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatReplyMessage))
+      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatReplyMessageData))
 
       it('decodes the message type', () => expect(decoded.type).toBe(MessageType.REPLY))
       it('decodes the channel name', () => expect(decoded.channel.name).toBe(CHANNEL_NAME))
@@ -144,7 +149,7 @@ describe('decodePackChatMessage', () => {
   })
 
   describe('when decoding a REACTION message', () => {
-    let decoded: PackChatReactionMessage
+    let decoded: PackChatReactionMessageData
 
     describe.each([
       {
@@ -159,7 +164,7 @@ describe('decodePackChatMessage', () => {
         expectedEmoji: '👍'
       }
     ])('$description', ({ buffer, expectedEmoji }) => {
-      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatReactionMessage))
+      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatReactionMessageData))
 
       it('decodes the message type', () => expect(decoded.type).toBe(MessageType.REACTION))
       it('decodes the channel name', () => expect(decoded.channel.name).toBe(CHANNEL_NAME))
@@ -178,7 +183,7 @@ describe('decodePackChatMessage', () => {
   })
 
   describe('when decoding an EDIT message', () => {
-    let decoded: PackChatEditMessage
+    let decoded: PackChatEditMessageData
 
     describe.each([
       {
@@ -193,7 +198,7 @@ describe('decodePackChatMessage', () => {
         expectedText: 'Updated text'
       }
     ])('$description', ({ buffer, expectedText }) => {
-      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatEditMessage))
+      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatEditMessageData))
 
       it('decodes the message type', () => expect(decoded.type).toBe(MessageType.EDIT))
       it('decodes the channel name', () => expect(decoded.channel.name).toBe(CHANNEL_NAME))
@@ -221,7 +226,7 @@ describe('decodePackChatMessage', () => {
   })
 
   describe('when decoding a DELETE message', () => {
-    let decoded: PackChatDeleteMessage
+    let decoded: PackChatDeleteMessageData
 
     describe.each([
       {
@@ -229,7 +234,7 @@ describe('decodePackChatMessage', () => {
         buffer: new Uint8Array([DELETE_FORMAT_BYTE, ...CHANNEL_BYTES, ...MESSAGE_ID_BYTES, ...DELETE_ID_BYTES])
       }
     ])('$description', ({ buffer }) => {
-      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatDeleteMessage))
+      beforeEach(() => (decoded = decodePackChatMessage(buffer) as PackChatDeleteMessageData))
 
       it('decodes the message type', () => expect(decoded.type).toBe(MessageType.DELETE))
       it('decodes the channel name', () => expect(decoded.channel.name).toBe(CHANNEL_NAME))
