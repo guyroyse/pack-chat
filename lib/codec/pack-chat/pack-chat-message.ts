@@ -1,20 +1,20 @@
-import { decodePackChatMessage } from './pack-chat-decoder'
 import { encodePackChatMessage } from './pack-chat-encoder'
+import { decodePackChatMessage } from './pack-chat-decoder'
 import { PackChatChannel } from './pack-chat-channel'
 import { PackChatMessageId } from './pack-chat-message-id'
-import { MessageType, PackChatMessageData } from './types'
+import { MessageType, PackChatMessageData } from './pack-chat-types'
 
 /**
- * PackChat Message class
+ * Abstract base class for PackChat protocol messages
  *
- * Represents a complete PackChat protocol message.
+ * Provides common interface for all message types with polymorphic encode/decode.
  *
- * Message types:
- * - ROOT: Normal message [message_id] [text]
- * - REPLY: Thread reply [message_id] [reply_to_id] [text]
- * - REACTION: Emoji reaction [react_to_id] [emoji]
- * - EDIT: Edit message [message_id] [edit_id] [new_text]
- * - DELETE: Delete message [message_id] [delete_id]
+ * Concrete message types:
+ * - RootMessage: Normal message [message_id] [text]
+ * - ReplyMessage: Thread reply [message_id] [reply_to_id] [text]
+ * - ReactionMessage: Emoji reaction [react_to_id] [emoji]
+ * - EditMessage: Edit message [message_id] [edit_id] [new_text]
+ * - DeleteMessage: Delete message [message_id] [delete_id]
  *
  * Wire format:
  * ┌────────────────────────────────────────────────────────────┐
@@ -28,82 +28,12 @@ import { MessageType, PackChatMessageData } from './types'
  * │ Message Text (UTF-8, max 224 bytes)                        │
  * └────────────────────────────────────────────────────────────┘
  */
-export class PackChatMessage {
-  #data: PackChatMessageData
+export abstract class PackChatMessage {
+  /** Channel name */
+  readonly channel: PackChatChannel
 
-  private constructor(data: PackChatMessageData) {
-    this.#data = data
-  }
-
-  /** Message type */
-  get type(): MessageType {
-    return this.#data.type
-  }
-
-  /** Channel */
-  get channel(): PackChatChannel {
-    return this.#data.channel
-  }
-
-  /** Message ID (for ROOT, REPLY, EDIT, DELETE) */
-  get messageId(): PackChatMessageId | undefined {
-    if ('messageId' in this.#data) {
-      return this.#data.messageId
-    }
-    return undefined
-  }
-
-  /** Reply-to ID (for REPLY) */
-  get replyToId(): PackChatMessageId | undefined {
-    if (this.#data.type === MessageType.REPLY) {
-      return this.#data.replyToId
-    }
-    return undefined
-  }
-
-  /** React-to ID (for REACTION) */
-  get reactToId(): PackChatMessageId | undefined {
-    if (this.#data.type === MessageType.REACTION) {
-      return this.#data.reactToId
-    }
-    return undefined
-  }
-
-  /** Edit ID (for EDIT) */
-  get editId(): PackChatMessageId | undefined {
-    if (this.#data.type === MessageType.EDIT) {
-      return this.#data.editId
-    }
-    return undefined
-  }
-
-  /** Delete ID (for DELETE) */
-  get deleteId(): PackChatMessageId | undefined {
-    if (this.#data.type === MessageType.DELETE) {
-      return this.#data.deleteId
-    }
-    return undefined
-  }
-
-  /** Message text (for ROOT, REPLY, EDIT) */
-  get text(): string | undefined {
-    if ('text' in this.#data) {
-      return this.#data.text
-    }
-    return undefined
-  }
-
-  /** Emoji text (for REACTION) */
-  get emoji(): string | undefined {
-    if (this.#data.type === MessageType.REACTION) {
-      return this.#data.emoji
-    }
-    return undefined
-  }
-
-  /** Raw message data (discriminated union) */
-  get data(): PackChatMessageData {
-    return this.#data
+  protected constructor(channel: PackChatChannel) {
+    this.channel = channel
   }
 
   /**
@@ -111,145 +41,157 @@ export class PackChatMessage {
    *
    * @returns Encoded message bytes
    */
-  encode(): Uint8Array {
-    return encodePackChatMessage(this.#data)
-  }
+  abstract encode(): Uint8Array
 
   /**
-   * Decode a PackChat message from bytes
+   * Decode a PackChat message from bytes (factory method)
    *
    * @param buffer Encoded message bytes (from AX.25 info field)
-   * @returns Decoded PackChatMessage instance
+   * @returns Decoded PackChatMessage subclass instance
    * @throws Error if buffer invalid or unsupported message type
    */
   static decode(buffer: Uint8Array): PackChatMessage {
     const data = decodePackChatMessage(buffer)
-    return new PackChatMessage(data)
+
+    switch (data.type) {
+      case MessageType.ROOT:
+        return new RootMessage(data.channel, data.messageId, data.text)
+      case MessageType.REPLY:
+        return new ReplyMessage(data.channel, data.messageId, data.replyToId, data.text)
+      case MessageType.REACTION:
+        return new ReactionMessage(data.channel, data.messageId, data.reactToId, data.emoji)
+      case MessageType.EDIT:
+        return new EditMessage(data.channel, data.messageId, data.editId, data.text)
+      case MessageType.DELETE:
+        return new DeleteMessage(data.channel, data.messageId, data.deleteId)
+      default: {
+        const exhaustive: never = data
+        throw new Error(`Unknown message type: ${(exhaustive as PackChatMessageData).type}`)
+      }
+    }
+  }
+}
+
+/**
+ * ROOT message: Normal message [message_id] [text]
+ */
+export class RootMessage extends PackChatMessage {
+  readonly messageId: PackChatMessageId
+  readonly text: string
+
+  constructor(channel: PackChatChannel, messageId: PackChatMessageId, text: string) {
+    super(channel)
+    this.messageId = messageId
+    this.text = text
   }
 
-  /**
-   * Create a ROOT message
-   *
-   * @param channel Channel name
-   * @param messageId Message ID
-   * @param text Message text (max 224 bytes UTF-8)
-   * @returns PackChatMessage instance
-   * @throws Error if text exceeds maximum length
-   */
-  static root(channel: PackChatChannel, messageId: PackChatMessageId, text: string): PackChatMessage {
-    // Validate by encoding (will throw if text too long)
-    const data: PackChatMessageData = {
+  encode(): Uint8Array {
+    return encodePackChatMessage({
       type: MessageType.ROOT,
-      channel,
-      messageId,
-      text,
-    }
+      channel: this.channel,
+      messageId: this.messageId,
+      text: this.text
+    })
+  }
+}
 
-    // Pre-validate by encoding
-    encodePackChatMessage(data)
+/**
+ * REPLY message: Thread reply [message_id] [reply_to_id] [text]
+ */
+export class ReplyMessage extends PackChatMessage {
+  readonly messageId: PackChatMessageId
+  readonly replyToId: PackChatMessageId
+  readonly text: string
 
-    return new PackChatMessage(data)
+  constructor(channel: PackChatChannel, messageId: PackChatMessageId, replyToId: PackChatMessageId, text: string) {
+    super(channel)
+    this.messageId = messageId
+    this.replyToId = replyToId
+    this.text = text
   }
 
-  /**
-   * Create a REPLY message
-   *
-   * @param channel Channel name
-   * @param messageId Message ID
-   * @param replyToId ID of message being replied to
-   * @param text Reply text (max 224 bytes UTF-8)
-   * @returns PackChatMessage instance
-   * @throws Error if text exceeds maximum length
-   */
-  static reply(
-    channel: PackChatChannel,
-    messageId: PackChatMessageId,
-    replyToId: PackChatMessageId,
-    text: string
-  ): PackChatMessage {
-    const data: PackChatMessageData = {
+  encode(): Uint8Array {
+    return encodePackChatMessage({
       type: MessageType.REPLY,
-      channel,
-      messageId,
-      replyToId,
-      text,
-    }
+      channel: this.channel,
+      messageId: this.messageId,
+      replyToId: this.replyToId,
+      text: this.text
+    })
+  }
+}
 
-    // Pre-validate by encoding
-    encodePackChatMessage(data)
+/**
+ * REACTION message: Emoji reaction [message_id] [react_to_id] [emoji]
+ */
+export class ReactionMessage extends PackChatMessage {
+  readonly messageId: PackChatMessageId
+  readonly reactToId: PackChatMessageId
+  readonly emoji: string
 
-    return new PackChatMessage(data)
+  constructor(channel: PackChatChannel, messageId: PackChatMessageId, reactToId: PackChatMessageId, emoji: string) {
+    super(channel)
+    this.messageId = messageId
+    this.reactToId = reactToId
+    this.emoji = emoji
   }
 
-  /**
-   * Create a REACTION message
-   *
-   * @param channel Channel name
-   * @param reactToId ID of message being reacted to
-   * @param emoji Emoji text (max 224 bytes UTF-8)
-   * @returns PackChatMessage instance
-   * @throws Error if emoji exceeds maximum length
-   */
-  static reaction(channel: PackChatChannel, reactToId: PackChatMessageId, emoji: string): PackChatMessage {
-    const data: PackChatMessageData = {
+  encode(): Uint8Array {
+    return encodePackChatMessage({
       type: MessageType.REACTION,
-      channel,
-      reactToId,
-      emoji,
-    }
+      channel: this.channel,
+      messageId: this.messageId,
+      reactToId: this.reactToId,
+      emoji: this.emoji
+    })
+  }
+}
 
-    // Pre-validate by encoding
-    encodePackChatMessage(data)
+/**
+ * EDIT message: Edit message [message_id] [edit_id] [new_text]
+ */
+export class EditMessage extends PackChatMessage {
+  readonly messageId: PackChatMessageId
+  readonly editId: PackChatMessageId
+  readonly text: string
 
-    return new PackChatMessage(data)
+  constructor(channel: PackChatChannel, messageId: PackChatMessageId, editId: PackChatMessageId, text: string) {
+    super(channel)
+    this.messageId = messageId
+    this.editId = editId
+    this.text = text
   }
 
-  /**
-   * Create an EDIT message
-   *
-   * @param channel Channel name
-   * @param messageId Message ID of this edit
-   * @param editId ID of message being edited
-   * @param text New text (max 224 bytes UTF-8)
-   * @returns PackChatMessage instance
-   * @throws Error if text exceeds maximum length
-   */
-  static edit(
-    channel: PackChatChannel,
-    messageId: PackChatMessageId,
-    editId: PackChatMessageId,
-    text: string
-  ): PackChatMessage {
-    const data: PackChatMessageData = {
+  encode(): Uint8Array {
+    return encodePackChatMessage({
       type: MessageType.EDIT,
-      channel,
-      messageId,
-      editId,
-      text,
-    }
+      channel: this.channel,
+      messageId: this.messageId,
+      editId: this.editId,
+      text: this.text
+    })
+  }
+}
 
-    // Pre-validate by encoding
-    encodePackChatMessage(data)
+/**
+ * DELETE message: Delete message [message_id] [delete_id] (no text)
+ */
+export class DeleteMessage extends PackChatMessage {
+  readonly messageId: PackChatMessageId
+  readonly deleteId: PackChatMessageId
 
-    return new PackChatMessage(data)
+  constructor(channel: PackChatChannel, messageId: PackChatMessageId, deleteId: PackChatMessageId) {
+    super(channel)
+    this.messageId = messageId
+    this.deleteId = deleteId
   }
 
-  /**
-   * Create a DELETE message
-   *
-   * @param channel Channel name
-   * @param messageId Message ID of this delete
-   * @param deleteId ID of message being deleted
-   * @returns PackChatMessage instance
-   */
-  static delete(channel: PackChatChannel, messageId: PackChatMessageId, deleteId: PackChatMessageId): PackChatMessage {
-    const data: PackChatMessageData = {
+  encode(): Uint8Array {
+    return encodePackChatMessage({
       type: MessageType.DELETE,
-      channel,
-      messageId,
-      deleteId,
-    }
-
-    return new PackChatMessage(data)
+      channel: this.channel,
+      messageId: this.messageId,
+      deleteId: this.deleteId
+    })
   }
 }

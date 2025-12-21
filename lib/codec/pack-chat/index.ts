@@ -4,7 +4,7 @@
  * PackChat application-layer protocol for packet radio chat
  */
 
-export * from './types'
+export * from './pack-chat-types'
 export * from './pack-chat-channel'
 export * from './pack-chat-message-id'
 export * from './pack-chat-message'

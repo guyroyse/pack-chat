@@ -1,4 +1,4 @@
-import { PackChatChannelName } from './types'
+import { PackChatChannelName } from './pack-chat-types'
 
 export const CHANNEL_NAME_LENGTH = 7
 

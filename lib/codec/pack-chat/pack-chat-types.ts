@@ -62,11 +62,12 @@ export type PackChatReplyMessage = {
 }
 
 /**
- * REACTION message: Emoji reaction [react_to_id] [emoji]
+ * REACTION message: Emoji reaction [message_id] [react_to_id] [emoji]
  */
 export type PackChatReactionMessage = {
   type: MessageType.REACTION
   channel: PackChatChannel
+  messageId: PackChatMessageId
   reactToId: PackChatMessageId
   emoji: string
 }
