@@ -1,3 +1,5 @@
+import { PackChatChannel } from '@lib/codec/pack-chat/pack-chat-channel'
+import { PackChatMessageId } from '@lib/codec/pack-chat/pack-chat-message-id'
 import { PackChatMessage, RootMessage } from '@lib/codec/pack-chat/pack-chat-message'
 
 const FORMAT_BYTE = 0x00 // version=0, type=0 (ROOT), reserved=0
@@ -17,5 +19,17 @@ describe('PackChatMessage.decode', () => {
     it('decodes the channel name', () => expect(decoded.channel.name).toBe('abc'))
     it('decodes the message ID', () => expect(decoded.messageId.value).toBe(0x123456789abc1234n))
     it('decodes the text', () => expect(decoded.text).toBe('Hello world!'))
+  })
+
+  it('encodes and decodes back to the original values', () => {
+    const channel = new PackChatChannel('abc')
+    const messageId = new PackChatMessageId(0x123456789abc, 0x1234)
+    const message = new RootMessage(channel, messageId, 'Hello world!')
+    const encoded = message.encode()
+    const decoded = PackChatMessage.decode(encoded) as RootMessage
+    expect(decoded).toBeInstanceOf(RootMessage)
+    expect(decoded.channel.name).toBe('abc')
+    expect(decoded.messageId.value).toBe(messageId.value)
+    expect(decoded.text).toBe('Hello world!')
   })
 })

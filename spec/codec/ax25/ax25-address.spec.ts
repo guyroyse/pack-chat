@@ -65,9 +65,15 @@ describe('AX25_Address', () => {
       },
       {
         ...template,
+        description: 'encodes an address with a single-character callsign',
+        callsign: 'A',
+        expectedAddress: new Uint8Array([0x82, 0x40, 0x40, 0x40, 0x40, 0x40, 0x60])
+      },
+      {
+        ...template,
         description: 'encodes an address with a short callsign',
-        callsign: 'AB',
-        expectedAddress: new Uint8Array([0x82, 0x84, 0x40, 0x40, 0x40, 0x40, 0x60])
+        callsign: 'N1A',
+        expectedAddress: new Uint8Array([0x9c, 0x62, 0x82, 0x40, 0x40, 0x40, 0x60])
       },
       {
         ...template,
@@ -77,7 +83,20 @@ describe('AX25_Address', () => {
       },
       {
         ...template,
+        description: 'encodes an address with a zero SSID',
+        ssid: 0 as AX25_SSID,
+        expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60])
+      },
+
+      {
+        ...template,
         description: 'encodes an address with a non-zero SSID',
+        ssid: 7 as AX25_SSID,
+        expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x6e])
+      },
+      {
+        ...template,
+        description: 'encodes an address with the maximum SSID',
         ssid: 15 as AX25_SSID,
         expectedAddress: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x7e])
       },
@@ -121,9 +140,15 @@ describe('AX25_Address', () => {
       },
       {
         ...template,
+        description: 'decodes an address with a single-character callsign',
+        buffer: new Uint8Array([0x82, 0x40, 0x40, 0x40, 0x40, 0x40, 0x60]),
+        expectedCallsign: 'A'
+      },
+      {
+        ...template,
         description: 'decodes an address with a short callsign',
-        buffer: new Uint8Array([0x82, 0x84, 0x40, 0x40, 0x40, 0x40, 0x60]),
-        expectedCallsign: 'AB'
+        buffer: new Uint8Array([0x9c, 0x62, 0x82, 0x40, 0x40, 0x40, 0x60]),
+        expectedCallsign: 'N1A'
       },
       {
         ...template,
@@ -133,7 +158,19 @@ describe('AX25_Address', () => {
       },
       {
         ...template,
+        description: 'decodes an address with a zero SSID',
+        buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x60]),
+        expectedSSID: 0 as AX25_SSID
+      },
+      {
+        ...template,
         description: 'decodes an address with a non-zero SSID',
+        buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x6e]),
+        expectedSSID: 7 as AX25_SSID
+      },
+      {
+        ...template,
+        description: 'decodes an address with a maximum SSID',
         buffer: new Uint8Array([0x96, 0x6c, 0x82, 0x84, 0x86, 0x40, 0x7e]),
         expectedSSID: 15 as AX25_SSID
       },

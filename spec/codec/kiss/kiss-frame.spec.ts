@@ -38,4 +38,12 @@ describe('KISS_Frame', () => {
       )
     })
   })
+
+  it('encodes and decodes back to the original payload', () => {
+    const frame = new KISS_Frame(samplePayload)
+    const encoded = frame.encode()
+    const [decoded, remainder] = KISS_Frame.decode(encoded)
+    expect(decoded.payload).toEqual(samplePayload)
+    expect(remainder).toEqual(new Uint8Array([]))
+  })
 })

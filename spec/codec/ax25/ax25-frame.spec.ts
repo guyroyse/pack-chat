@@ -35,4 +35,13 @@ describe('AX25_Frame', () => {
     it('decodes ssid', () => expect(frame.ssid).toBe(SSID))
     it('decodes info', () => expect(frame.info).toEqual(INFO_BUFFER))
   })
+
+  it('encodes and decodes back to the original values', () => {
+    const frame = new AX25_Frame(CALLSIGN, SSID, INFO_BUFFER)
+    const encoded = frame.encode()
+    const decoded = AX25_Frame.decode(encoded)
+    expect(decoded.callsign).toBe(CALLSIGN)
+    expect(decoded.ssid).toBe(SSID)
+    expect(decoded.info).toEqual(INFO_BUFFER)
+  })
 })

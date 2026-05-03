@@ -1,6 +1,6 @@
 import { PackChatChannel } from '@lib/codec/pack-chat/pack-chat-channel'
 import { PackChatMessageId } from '@lib/codec/pack-chat/pack-chat-message-id'
-import { EditMessage } from '@lib/codec/pack-chat/pack-chat-message'
+import { EditMessage, PackChatMessage } from '@lib/codec/pack-chat/pack-chat-message'
 
 const CHANNEL_BYTES = new Uint32Array([0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c])
 const MESSAGE_ID_BYTES = new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0x12, 0x34])
@@ -44,5 +44,16 @@ describe('EditMessage', () => {
       const expected = new Uint8Array([0x0c, ...CHANNEL_BYTES, ...MESSAGE_ID_BYTES, ...EDIT_ID_BYTES, ...NEW_TEXT_BYTES])
       expect(encoded).toEqual(expected)
     })
+  })
+
+  it('encodes and decodes back to the original values', () => {
+    const message = new EditMessage(channel, messageId, editId, 'New text')
+    const encoded = message.encode()
+    const decoded = PackChatMessage.decode(encoded) as EditMessage
+    expect(decoded).toBeInstanceOf(EditMessage)
+    expect(decoded.channel.name).toBe('general')
+    expect(decoded.messageId.value).toBe(messageId.value)
+    expect(decoded.editId.value).toBe(editId.value)
+    expect(decoded.text).toBe('New text')
   })
 })

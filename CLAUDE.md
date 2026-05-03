@@ -78,14 +78,16 @@ pack-chat/
 │           └── index.ts                # Public exports
 ├── spec/                               # Test files
 │   └── codec/
-│       ├── kiss/                       # KISS protocol tests (25 tests)
+│       ├── kiss/                       # KISS protocol tests (28 tests)
 │       │   ├── kiss-frame.spec.ts
 │       │   ├── kiss-encoder.spec.ts
 │       │   └── kiss-decoder.spec.ts
-│       ├── ax25/                       # AX.25 protocol tests (43 tests)
+│       ├── ax25/                       # AX.25 protocol tests (79 tests)
 │       │   ├── ax25-address.spec.ts
+│       │   ├── ax25-encoder.spec.ts
+│       │   ├── ax25-decoder.spec.ts
 │       │   └── ax25-frame.spec.ts
-│       └── pack-chat/                  # PackChat protocol tests (65 tests)
+│       └── pack-chat/                  # PackChat protocol tests (139 tests)
 │           ├── pack-chat-channel.spec.ts
 │           ├── pack-chat-message-id.spec.ts
 │           ├── pack-chat-decoder.spec.ts
@@ -110,7 +112,7 @@ pack-chat/
 
 ### KISS Protocol - COMPLETE
 
-Simplified implementation with 25 passing tests.
+Simplified implementation with 28 passing tests.
 
 **Features:**
 
@@ -137,7 +139,7 @@ const [decoded, remainder] = KISS_Frame.decode(buffer)
 
 ### AX.25 Protocol - COMPLETE
 
-Simplified implementation with 43 passing tests (33 address + 10 frame).
+Simplified implementation with 79 passing tests (45 address + 13 encoder + 13 decoder + 8 frame).
 
 **Features:**
 
@@ -171,7 +173,7 @@ const decoded = AX25_Frame.decode(bytes)
 
 ### PackChat Protocol - COMPLETE
 
-Complete implementation with 65 passing tests.
+Complete implementation with 139 passing tests.
 
 **Features:**
 
@@ -248,7 +250,7 @@ const decoded = PackChatMessage.decode(bytes)
 - PID: Always 0xF0 (no layer 3, hardcoded)
 - Repeaters: Not supported (local-only communication)
 
-### PackChat Protocol (Planned)
+### PackChat Protocol
 
 **Info Field Format:**
 
@@ -356,13 +358,15 @@ Tests go in `spec/` mirroring the `lib/` structure. Custom matchers `toBeTrue()`
 
 ### Next Steps
 
-1. Test with real radio hardware (Direwolf TNC)
+1. Convert to monorepo with workspaces (codec as its own package)
 2. Create root index.ts for package exports
 3. Add integration tests (KISS → AX.25 → PackChat)
+4. Test with real radio hardware (Direwolf TNC)
 
 ### Future
 
 - TCP client for TNC connection
+- Custom FFT-based signal processing (replacing Direwolf dependency)
 - Message deduplication
 - Channel/DM state management
 - Example chat application

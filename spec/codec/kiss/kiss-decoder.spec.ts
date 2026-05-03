@@ -53,6 +53,11 @@ describe('decodeKISS_Frame', () => {
     expect(remainder).toEqual(new Uint8Array([]))
   })
 
+  it('throws error for empty input', () => {
+    const bytes = new Uint8Array([])
+    expect(() => decodeKISS_Frame(bytes)).toThrow('Empty KISS frame')
+  })
+
   it('throws error if frame does not start with FEND', () => {
     const bytes = new Uint8Array([0x01, 0x00, 0x01, 0x02, FEND])
     expect(() => decodeKISS_Frame(bytes)).toThrow('KISS frame does not start with FEND')
@@ -78,5 +83,10 @@ describe('decodeKISS_Frame', () => {
   it('throws error for invalid escape sequence', () => {
     const bytes = new Uint8Array([FEND, 0x00, 0x01, FESC, 0x99, FEND])
     expect(() => decodeKISS_Frame(bytes)).toThrow('Invalid escape sequence')
+  })
+
+  it('throws error for incomplete escape sequence at end of buffer', () => {
+    const bytes = new Uint8Array([FEND, 0x00, 0x01, FESC])
+    expect(() => decodeKISS_Frame(bytes)).toThrow('Incomplete KISS frame')
   })
 })
