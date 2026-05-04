@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "declarationDir": "./dist",
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@packchat/codec/*": ["./lib/*"]
+    }
+  },
+  "include": ["lib/**/*", "spec/**/*"]
+}

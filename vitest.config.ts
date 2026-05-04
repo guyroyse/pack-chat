@@ -6,12 +6,11 @@ export default defineConfig({
     globals: true,
     clearMocks: true,
     isolate: false,
-    setupFiles: ['./vitest.setup.ts'],
     exclude: ['**/node_modules/**', '**/dist/**']
   },
   resolve: {
     alias: {
-      '@lib': path.resolve(__dirname, './lib')
+      '@packchat/codec': path.resolve(__dirname, './packages/codec/lib')
     }
   }
 })

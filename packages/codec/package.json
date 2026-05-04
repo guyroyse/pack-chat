@@ -1,0 +1,18 @@
+{
+  "name": "@packchat/codec",
+  "version": "0.1.0",
+  "description": "PackChat codec - KISS, AX.25, and PackChat protocol encoders/decoders",
+  "author": "Guy Royse <guy@guy.dev> (https://guy.dev)",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  }
+}

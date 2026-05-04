@@ -1,14 +1,14 @@
 {
   "name": "packchat",
   "version": "0.1.0",
+  "private": true,
   "description": "PackChat - Chat rooms over packet radio",
   "author": "Guy Royse <guy@guy.dev> (https://guy.dev)",
   "license": "MIT",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "type": "module",
+  "workspaces": ["packages/*"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "npm --workspaces run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
