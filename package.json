@@ -8,10 +8,11 @@
   "type": "module",
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm --workspaces run build",
+    "build": "npm --workspaces --if-present run build",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "monitor": "npm --workspace @packchat/monitor run monitor"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",

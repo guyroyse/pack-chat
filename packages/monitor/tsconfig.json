@@ -4,10 +4,10 @@
     "noEmit": true,
     "outDir": "./dist",
     "declarationDir": "./dist",
-    "types": ["node", "vitest/globals"],
+    "types": ["node"],
     "paths": {
-      "@packchat/codec/*": ["./lib/*"]
+      "@packchat/codec": ["../codec/lib"]
     }
   },
-  "include": ["lib/**/*", "spec/**/*"]
+  "include": ["lib/**/*"]
 }
